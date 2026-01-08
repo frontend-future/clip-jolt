@@ -1,4 +1,25 @@
-const MAIN_TEXT_PROMPT = `YOU ARE A CONTENT CREATOR FOR THE BRAND: Frontend Future
+import path from 'node:path';
+
+import type { ReelDefaults } from './types';
+
+export const DEFAULTS: ReelDefaults = {
+  theme: 'nord',
+  width: 1080,
+  height: 1920,
+  padding: 80,
+  font: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+  background: 'radial-gradient(1200px circle at 10% 20%, #1f2937 0%, #0f172a 45%, #020617 100%)',
+  scale: 2,
+  fontSize: 24,
+  videoDuration: 7,
+  bRollPath: path.join(process.cwd(), 'public/assets/reel-generator/video/bRoll.MOV'),
+  audioFolder: path.join(process.cwd(), 'public/assets/reel-generator/audio'),
+  fontPath: path.join(process.cwd(), 'public/assets/reel-generator/fonts/Inter.ttf'),
+  outputDir: path.join(process.cwd(), 'public/generated'),
+  levelAppearTime: 2,
+};
+
+export const MAIN_TEXT_PROMPT = `YOU ARE A CONTENT CREATOR FOR THE BRAND: Frontend Future
 
 Frontend Future is a 12 week mentorship and remote career accelerator that helps adults break into tech, learn frontend development, and land remote six figure developer roles, without endless LeetCode, random tutorials, or spam job applications. We position success as the result of mentorship, structure, consistent practice, practical portfolio projects, and real conversations with hiring managers.
 
@@ -178,25 +199,9 @@ Long emotional caption with 6 to 12 numbered insights using emojis and slightly 
 
 Brand follow line at the end
 
-CTA keyword request with quotes`
+CTA keyword request with quotes`;
 
-
-const DEFAULTS = {
-    theme: "nord",
-    width: 1080,
-    height: 1920,
-    padding: 80,
-    font: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-    background: "radial-gradient(1200px circle at 10% 20%, #1f2937 0%, #0f172a 45%, #020617 100%)",
-    scale: 2,
-    fontSize: 24,
-    videoDuration: 7,
-    bRollPath: "./bRoll.mov",
-    audioFolder: "./audio",
-    levelAppearTime: 2 // Level text appears at 2 seconds
-};
-
-const CODING_CHALLENGE_PROMPT = `You are helping me produce viral Instagram Reels for the brand @frontendfuture.
+export const CODING_CHALLENGE_PROMPT = `You are helping me produce viral Instagram Reels for the brand @frontendfuture.
 
 🎯 GOAL
 Generate 1 mini coding reel idea where:
@@ -232,7 +237,3 @@ IMPORTANT:
 - No explanations
 - No revealing the answer
 - Code should be clean and properly formatted`;
-
-
-
-export { MAIN_TEXT_PROMPT, DEFAULTS, CODING_CHALLENGE_PROMPT };

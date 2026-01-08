@@ -1,18 +1,16 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import process from "node:process";
-import { fileURLToPath } from "node:url";
-import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
-import puppeteer from "puppeteer";
-import ffmpeg from "fluent-ffmpeg";
-import dotenv from "dotenv";
-import { getHighlighter } from "shiki";
-dotenv.config();
-import { DEFAULTS, CODING_CHALLENGE_PROMPT } from "./constants.js";
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+import ffmpeg from 'fluent-ffmpeg';
+import puppeteer, { type Browser } from 'puppeteer';
+import { getHighlighter } from 'shiki';
 
-function getTimestampedFolder() {
+import { CODING_CHALLENGE_PROMPT, DEFAULTS } from './constants';
+import type { CodingChallengeResult, CodingSnippet } from './types';
+
+function getTimestampedFolder(): string {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -21,71 +19,83 @@ function getTimestampedFolder() {
   const minutes = String(now.getMinutes()).padStart(2, '0');
   const seconds = String(now.getSeconds()).padStart(2, '0');
 
-  return `output_${year}${month}${day}_${hours}${minutes}${seconds}`;
+  return `coding_${year}${month}${day}_${hours}${minutes}${seconds}`;
 }
 
-async function generateSnippetWithAI(index) {
+async function generateSnippetWithAI(): Promise<CodingSnippet> {
   if (!process.env.OPENAI_API_KEY) {
-    throw new Error("Missing OPENAI_API_KEY");
+    throw new Error('Missing OPENAI_API_KEY');
   }
 
-  console.log(`Generating snippet ${index + 1}...`);
+  console.log('Generating snippet with OpenAI...');
+  console.log('Using API key:', process.env.OPENAI_API_KEY?.slice(0, 10) + '...');
 
-  const response = await generateText({
-    model: openai("gpt-4o"),
-    prompt: CODING_CHALLENGE_PROMPT,
-    maxTokens: 500,
-    temperature: 0.9
-  });
+  try {
+    console.log('Calling OpenAI API...');
+    const response = await generateText({
+      model: openai('gpt-4o'),
+      prompt: CODING_CHALLENGE_PROMPT,
+      maxTokens: 500,
+      temperature: 0.9,
+    });
 
-  let cleanText = response.text.trim();
-  cleanText = cleanText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    console.log('OpenAI response received');
+    console.log('Raw response:', response.text.slice(0, 100) + '...');
 
-  const snippet = JSON.parse(cleanText);
-  return snippet;
+    let cleanText = response.text.trim();
+    cleanText = cleanText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+
+    console.log('Parsing JSON response...');
+    const snippet = JSON.parse(cleanText) as CodingSnippet;
+    console.log('Snippet generated:', snippet.difficulty);
+    return snippet;
+  } catch (error) {
+    console.error('OpenAI API error:', error);
+    throw error;
+  }
 }
 
-async function getVideoDuration(videoPath) {
+async function getVideoDuration(videoPath: string): Promise<number> {
   return new Promise((resolve, reject) => {
     ffmpeg.ffprobe(videoPath, (err, metadata) => {
       if (err) {
         reject(err);
       } else {
-        resolve(metadata.format.duration);
+        resolve(metadata.format.duration || 0);
       }
     });
   });
 }
 
-async function getRandomAudioFile(audioFolder) {
-  console.log("\nSelecting random audio file...");
+async function getRandomAudioFile(audioFolder: string): Promise<string> {
+  console.log('\nSelecting random audio file...');
 
-  try {
-    const files = await fs.readdir(audioFolder);
+  const files = await fs.readdir(audioFolder);
 
-    const audioFiles = files.filter(file => {
-      const ext = path.extname(file).toLowerCase();
-      return ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac'].includes(ext);
-    });
+  const audioFiles = files.filter((file) => {
+    const ext = path.extname(file).toLowerCase();
+    return ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac'].includes(ext);
+  });
 
-    if (audioFiles.length === 0) {
-      throw new Error(`No audio files found in ${audioFolder}`);
-    }
-
-    const randomIndex = Math.floor(Math.random() * audioFiles.length);
-    const selectedAudio = audioFiles[randomIndex];
-    const audioPath = path.join(audioFolder, selectedAudio);
-
-    console.log(`✓ Selected audio: ${selectedAudio}`);
-
-    return audioPath;
-  } catch (err) {
-    throw new Error(`Failed to read audio folder: ${err.message}`);
+  if (audioFiles.length === 0) {
+    throw new Error(`No audio files found in ${audioFolder}`);
   }
+
+  const randomIndex = Math.floor(Math.random() * audioFiles.length);
+  const selectedAudio = audioFiles[randomIndex];
+  const audioPath = path.join(audioFolder, selectedAudio!);
+
+  console.log(`Selected audio: ${selectedAudio}`);
+
+  return audioPath;
 }
 
-async function extractRandomVideoSegment(inputVideo, outputVideo, duration) {
-  console.log("\nExtracting random segment from b-roll video...");
+async function extractRandomVideoSegment(
+  inputVideo: string,
+  outputVideo: string,
+  duration: number,
+): Promise<void> {
+  console.log('\nExtracting random segment from b-roll video...');
 
   const totalDuration = await getVideoDuration(inputVideo);
   const maxStartTime = Math.max(0, totalDuration - duration);
@@ -103,7 +113,7 @@ async function extractRandomVideoSegment(inputVideo, outputVideo, duration) {
         '-pix_fmt yuv420p',
         '-vf scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920',
         '-preset medium',
-        '-crf 23'
+        '-crf 23',
       ])
       .output(outputVideo)
       .on('start', (commandLine) => {
@@ -115,7 +125,7 @@ async function extractRandomVideoSegment(inputVideo, outputVideo, duration) {
         }
       })
       .on('end', () => {
-        console.log(`\n✓ Video segment extracted: ${outputVideo}`);
+        console.log(`\nVideo segment extracted: ${outputVideo}`);
         resolve();
       })
       .on('error', (err) => {
@@ -126,49 +136,17 @@ async function extractRandomVideoSegment(inputVideo, outputVideo, duration) {
   });
 }
 
-// Modified to remove difficulty level from the image
-async function renderSnippet(code, difficulty, outputPath, browser) {
-  const highlighter = await getHighlighter({
-    themes: ["nord"],
-    langs: ["javascript"]
-  });
-
-  const codeHtml = highlighter.codeToHtml(code, {
-    lang: "javascript",
-    theme: "nord"
-  });
-
-  const page = await browser.newPage();
-  await page.setViewport({
-    width: DEFAULTS.width,
-    height: DEFAULTS.height,
-    deviceScaleFactor: DEFAULTS.scale
-  });
-
-  const html = buildHtml({
-    codeHtml,
-    width: DEFAULTS.width,
-    height: DEFAULTS.height,
-    padding: DEFAULTS.padding,
-    background: DEFAULTS.background,
-    font: DEFAULTS.font,
-    fontSize: DEFAULTS.fontSize
-  });
-
-  await page.setContent(html, { waitUntil: "load" });
-
-  await page.screenshot({
-    path: outputPath,
-    fullPage: false,
-    omitBackground: true
-  });
-  await page.close();
-
-  console.log(`  ✓ Rendered: ${outputPath}`);
+interface HtmlOptions {
+  codeHtml: string;
+  width: number;
+  height: number;
+  padding: number;
+  background: string;
+  font: string;
+  fontSize: number;
 }
 
-// Modified to remove difficulty level
-function buildHtml({ codeHtml, width, height, padding, background, font, fontSize }) {
+function buildHtml({ codeHtml, width, height, padding, font, fontSize }: HtmlOptions): string {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -207,7 +185,7 @@ function buildHtml({ codeHtml, width, height, padding, background, font, fontSiz
       font-weight: 700;
       margin: 0;
       letter-spacing: -0.02em;
-      text-shadow: 
+      text-shadow:
         -2px -2px 0 #000,
         2px -2px 0 #000,
         -2px 2px 0 #000,
@@ -280,11 +258,61 @@ function buildHtml({ codeHtml, width, height, padding, background, font, fontSiz
 </html>`;
 }
 
-// New function to add level text with FFmpeg
-async function overlayCodeOnVideoWithAudio(backgroundVideo, overlayImage, audioPath, outputVideo, duration, difficulty) {
-  console.log("\nOverlaying code snippet on background video and adding audio...");
+async function renderSnippet(
+  code: string,
+  outputPath: string,
+  browser: Browser,
+): Promise<void> {
+  const highlighter = await getHighlighter({
+    themes: ['nord'],
+    langs: ['javascript'],
+  });
 
-  const levelY = 840; // Position between "What Is The Output?" and the code frame
+  const codeHtml = highlighter.codeToHtml(code, {
+    lang: 'javascript',
+    theme: 'nord',
+  });
+
+  const page = await browser.newPage();
+  await page.setViewport({
+    width: DEFAULTS.width,
+    height: DEFAULTS.height,
+    deviceScaleFactor: DEFAULTS.scale,
+  });
+
+  const html = buildHtml({
+    codeHtml,
+    width: DEFAULTS.width,
+    height: DEFAULTS.height,
+    padding: DEFAULTS.padding,
+    background: DEFAULTS.background,
+    font: DEFAULTS.font,
+    fontSize: DEFAULTS.fontSize,
+  });
+
+  await page.setContent(html, { waitUntil: 'load' });
+
+  await page.screenshot({
+    path: outputPath,
+    fullPage: false,
+    omitBackground: true,
+  });
+  await page.close();
+
+  console.log(`Rendered: ${outputPath}`);
+}
+
+async function overlayCodeOnVideoWithAudio(
+  backgroundVideo: string,
+  overlayImage: string,
+  audioPath: string,
+  outputVideo: string,
+  duration: number,
+  difficulty: string,
+): Promise<void> {
+  console.log('\nOverlaying code snippet on background video and adding audio...');
+
+  const levelY = 840;
 
   return new Promise((resolve, reject) => {
     ffmpeg()
@@ -292,24 +320,21 @@ async function overlayCodeOnVideoWithAudio(backgroundVideo, overlayImage, audioP
       .input(overlayImage)
       .input(audioPath)
       .complexFilter([
-        // Scale and position the overlay image
         '[1:v]scale=1080:1920[overlay]',
         '[0:v][overlay]overlay=0:0[video_base]',
-        // Add level text that appears at 2 seconds
         `[video_base]drawtext=` +
-        `text='LEVEL\\: ${difficulty}':` +
-        `fontfile=/System/Library/Fonts/Supplemental/Arial\\ Bold.ttf:` +
-        `fontsize=42:` +
-        `fontcolor=#818cf8:` +
-        `borderw=2:` +
-        `bordercolor=black:` +
-        `x=(w-text_w)/2:` +
-        `y=${levelY}:` +
-        `enable='gte(t,${DEFAULTS.levelAppearTime})':` +
-        `alpha='if(lt(t,${DEFAULTS.levelAppearTime}),0,if(lt(t,${DEFAULTS.levelAppearTime + 0.3}),(t-${DEFAULTS.levelAppearTime})/0.3,1))'` +
-        `[video]`,
-        // Trim audio to match video duration
-        `[2:a]atrim=0:${duration},asetpts=PTS-STARTPTS[audio]`
+          `text='LEVEL\\: ${difficulty}':` +
+          `fontfile=/System/Library/Fonts/Supplemental/Arial\\ Bold.ttf:` +
+          `fontsize=42:` +
+          `fontcolor=#818cf8:` +
+          `borderw=2:` +
+          `bordercolor=black:` +
+          `x=(w-text_w)/2:` +
+          `y=${levelY}:` +
+          `enable='gte(t,${DEFAULTS.levelAppearTime})':` +
+          `alpha='if(lt(t,${DEFAULTS.levelAppearTime}),0,if(lt(t,${DEFAULTS.levelAppearTime + 0.3}),(t-${DEFAULTS.levelAppearTime})/0.3,1))'` +
+          `[video]`,
+        `[2:a]atrim=0:${duration},asetpts=PTS-STARTPTS[audio]`,
       ])
       .outputOptions([
         '-map [video]',
@@ -321,7 +346,7 @@ async function overlayCodeOnVideoWithAudio(backgroundVideo, overlayImage, audioP
         '-pix_fmt yuv420p',
         '-preset medium',
         '-crf 23',
-        '-shortest'
+        '-shortest',
       ])
       .output(outputVideo)
       .on('start', (commandLine) => {
@@ -333,7 +358,7 @@ async function overlayCodeOnVideoWithAudio(backgroundVideo, overlayImage, audioP
         }
       })
       .on('end', () => {
-        console.log(`\n✓ Final video with audio and level text created: ${outputVideo}`);
+        console.log(`\nFinal video with audio and level text created: ${outputVideo}`);
         resolve();
       })
       .on('error', (err) => {
@@ -344,45 +369,56 @@ async function overlayCodeOnVideoWithAudio(backgroundVideo, overlayImage, audioP
   });
 }
 
-export async function generateCodingChallengeReel() {
-  const outputDir = `./${getTimestampedFolder()}`;
-  const imagePath = path.join(outputDir, "snippet.png");
-  const bRollSegmentPath = path.join(outputDir, "broll_segment.mp4");
-  const videoPath = path.join(outputDir, "reel.mp4");
-  const captionPath = path.join(outputDir, "caption.txt");
+export async function generateCodingChallengeReel(): Promise<CodingChallengeResult> {
+  const timestampFolder = getTimestampedFolder();
+  const outputDir = path.join(DEFAULTS.outputDir, timestampFolder);
+  const imagePath = path.join(outputDir, 'snippet.png');
+  const bRollSegmentPath = path.join(outputDir, 'broll_segment.mp4');
+  const videoPath = path.join(outputDir, 'reel.mp4');
+  const captionPath = path.join(outputDir, 'caption.txt');
 
   await fs.mkdir(outputDir, { recursive: true });
-  console.log(`\n📁 Output directory: ${outputDir}\n`);
+  console.log(`\nOutput directory: ${outputDir}\n`);
 
   const duration = DEFAULTS.videoDuration;
 
   try {
     await fs.access(DEFAULTS.bRollPath);
-  } catch (err) {
+  } catch {
     throw new Error(`B-roll video not found at: ${DEFAULTS.bRollPath}`);
   }
 
   try {
     await fs.access(DEFAULTS.audioFolder);
-  } catch (err) {
+  } catch {
     throw new Error(`Audio folder not found at: ${DEFAULTS.audioFolder}`);
   }
 
   console.log(`Generating 1 code snippet for a ${duration}s video...\n`);
 
-  const browser = await puppeteer.launch({ headless: "new" });
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
 
   try {
-    const snippet = await generateSnippetWithAI(0);
+    const snippet = await generateSnippetWithAI();
 
-    await renderSnippet(snippet.code, snippet.difficulty, imagePath, browser);
+    await renderSnippet(snippet.code, imagePath, browser);
 
     await extractRandomVideoSegment(DEFAULTS.bRollPath, bRollSegmentPath, duration);
 
     const audioPath = await getRandomAudioFile(DEFAULTS.audioFolder);
 
-    // Pass difficulty to the overlay function
-    await overlayCodeOnVideoWithAudio(bRollSegmentPath, imagePath, audioPath, videoPath, duration, snippet.difficulty);
+    await overlayCodeOnVideoWithAudio(
+      bRollSegmentPath,
+      imagePath,
+      audioPath,
+      videoPath,
+      duration,
+      snippet.difficulty,
+    );
 
     const captionContent =
       `==================== REEL ====================\n` +
@@ -392,18 +428,18 @@ export async function generateCodingChallengeReel() {
       `AUDIO: ${path.basename(audioPath)}\n`;
 
     await fs.writeFile(captionPath, captionContent);
-    console.log(`✓ Caption saved: ${captionPath}`);
+    console.log(`Caption saved: ${captionPath}`);
 
-    console.log("\n" + "=".repeat(60));
-    console.log("✨ ALL DONE!");
-    console.log("=".repeat(60));
-    console.log(`📁 Folder: ${outputDir}`);
-    console.log(`🎥 Video: ${videoPath}`);
-    console.log(`📝 Caption: ${captionPath}`);
-    console.log(`🖼️  Image: ${imagePath}`);
-    console.log(`🎬 B-roll segment: ${bRollSegmentPath}`);
-    console.log(`🎵 Audio: ${path.basename(audioPath)}`);
-    console.log(`⏱️  Level appears at: ${DEFAULTS.levelAppearTime}s`);
+    console.log('\n' + '='.repeat(60));
+    console.log('ALL DONE!');
+    console.log('='.repeat(60));
+    console.log(`Folder: ${outputDir}`);
+    console.log(`Video: ${videoPath}`);
+    console.log(`Caption: ${captionPath}`);
+    console.log(`Image: ${imagePath}`);
+    console.log(`B-roll segment: ${bRollSegmentPath}`);
+    console.log(`Audio: ${path.basename(audioPath)}`);
+    console.log(`Level appears at: ${DEFAULTS.levelAppearTime}s`);
 
     return {
       outputDir,
@@ -412,19 +448,9 @@ export async function generateCodingChallengeReel() {
       imagePath,
       bRollSegmentPath,
       audioPath,
-      snippet
+      snippet,
     };
   } finally {
     await browser.close();
   }
-}
-
-// Allow running directly as a script
-const __filename = fileURLToPath(import.meta.url);
-const mainPath = process.argv[1] ? path.normalize(process.argv[1]) : '';
-if (mainPath && path.normalize(__filename) === mainPath) {
-  generateCodingChallengeReel().catch((err) => {
-    console.error("Error:", err.message);
-    process.exit(1);
-  });
 }

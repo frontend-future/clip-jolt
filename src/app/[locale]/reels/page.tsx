@@ -3,8 +3,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
 type ReadCaptionReelData = {
   outputFolder: string;
   videoPath: string;
@@ -43,7 +41,7 @@ const Reels = () => {
     setError(null);
     setReadCaptionReel(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/generate/read-caption`, {
+      const response = await fetch('/api/generate/read-caption', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,7 +65,7 @@ const Reels = () => {
     setError(null);
     setCodingChallengeReel(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/generate/coding-challenge`, {
+      const response = await fetch('/api/generate/coding-challenge', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
