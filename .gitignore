@@ -49,3 +49,6 @@ local
 
 # vercel
 .vercel
+
+# Generated reel output files
+public/generated/
