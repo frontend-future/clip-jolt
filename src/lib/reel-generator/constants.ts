@@ -19,6 +19,42 @@ export const DEFAULTS: ReelDefaults = {
   levelAppearTime: 2,
 };
 
+// ============================================================================
+// Rendi.dev Cloud FFmpeg Configuration
+// ============================================================================
+// NOTE: Static assets (bRoll, audio) need to be hosted at publicly accessible
+// URLs for Rendi to access them. Options:
+//   1. Deploy this app and use production URLs (e.g., https://yourdomain.com/assets/...)
+//   2. Upload to cloud storage (S3, Google Cloud Storage, etc.)
+//   3. Use a CDN
+//
+// For development, you can temporarily use ngrok or similar to expose local files.
+//
+// To use Rendi, set these environment variables and update the URLs below:
+//   - RENDI_API_KEY: Your Rendi API key
+//   - Optionally override these URLs with environment variables in production
+
+export const RENDI_CONFIG = {
+  // Base URL where your static assets are publicly hosted
+  // In production, this should be your domain
+  // In development, you can use ngrok or deploy to get public URLs
+  assetBaseUrl: process.env.NEXT_PUBLIC_ASSET_BASE_URL || 'https://PLACEHOLDER.com',
+
+  // Public URLs for static assets
+  // These will be passed to Rendi's FFmpeg commands
+  bRollUrl: `${process.env.NEXT_PUBLIC_ASSET_BASE_URL || 'https://PLACEHOLDER.com'}/assets/reel-generator/video/bRoll.MOV`,
+  audioFolderUrl: `${process.env.NEXT_PUBLIC_ASSET_BASE_URL || 'https://PLACEHOLDER.com'}/assets/reel-generator/audio`,
+
+  // Audio file names (Rendi will fetch these from audioFolderUrl)
+  audioFiles: [
+    'ReelAudio-10371.mp3',
+    'ReelAudio-12635.mp3',
+    'ReelAudio-22545.mp3',
+    'ReelAudio-40298.mp3',
+    'ReelAudio-48155.mp3',
+  ],
+} as const;
+
 export const MAIN_TEXT_PROMPT = `YOU ARE A CONTENT CREATOR FOR THE BRAND: Frontend Future
 
 Frontend Future is a 12 week mentorship and remote career accelerator that helps adults break into tech, learn frontend development, and land remote six figure developer roles, without endless LeetCode, random tutorials, or spam job applications. We position success as the result of mentorship, structure, consistent practice, practical portfolio projects, and real conversations with hiring managers.

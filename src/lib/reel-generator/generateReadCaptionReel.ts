@@ -1,14 +1,16 @@
+/* eslint-disable no-console */
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
-import os from 'node:os';
 import path from 'node:path';
 
 import { openai } from '@ai-sdk/openai';
 import { generateObject } from 'ai';
-import ffmpeg from 'fluent-ffmpeg';
 import { z } from 'zod';
 
-import { DEFAULTS, MAIN_TEXT_PROMPT } from './constants';
+import { Env } from '@/libs/Env';
+
+import { createRendiClient } from '../rendi/client';
+import { DEFAULTS, MAIN_TEXT_PROMPT, RENDI_CONFIG } from './constants';
 import type { ReadCaptionResult } from './types';
 
 interface GeneratedText {
@@ -41,29 +43,19 @@ IMPORTANT: You must generate a UNIQUE and DIFFERENT hook each time. Do NOT repea
   return response.object;
 }
 
-function getRandomAudioFile(): string | null {
-  const audioDir = DEFAULTS.audioFolder;
-
-  if (!fs.existsSync(audioDir)) {
-    console.log('Warning: audio directory not found, proceeding without background music');
-    return null;
-  }
-
-  const audioExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac'];
-  const audioFiles = fs
-    .readdirSync(audioDir)
-    .filter((file) => audioExtensions.includes(path.extname(file).toLowerCase()))
-    .map((file) => path.join(audioDir, file));
+function getRandomAudioUrl(): string | null {
+  const audioFiles = RENDI_CONFIG.audioFiles;
 
   if (audioFiles.length === 0) {
-    console.log('Warning: no audio files found in audio directory');
+    console.log('Warning: no audio files configured, proceeding without background music');
     return null;
   }
 
   const randomAudio = audioFiles[Math.floor(Math.random() * audioFiles.length)];
-  console.log(`Selected random audio: ${randomAudio}`);
+  const audioUrl = `${RENDI_CONFIG.audioFolderUrl}/${randomAudio}`;
+  console.log(`Selected random audio: ${audioUrl}`);
 
-  return randomAudio!;
+  return audioUrl;
 }
 
 function createOutputFolder(): string {
@@ -76,72 +68,6 @@ function createOutputFolder(): string {
   }
 
   return fullPath;
-}
-
-function getVideoDuration(inputFile: string): Promise<number> {
-  return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(inputFile, (err, metadata) => {
-      if (err) {
-        reject(new Error(`Failed to get video duration: ${err.message}`));
-        return;
-      }
-
-      const duration = metadata.format.duration;
-      if (!duration) {
-        reject(new Error('Duration not found in video metadata'));
-        return;
-      }
-
-      resolve(duration);
-    });
-  });
-}
-
-function extractSegment(
-  inputFile: string,
-  startTime: number,
-  duration: number,
-  outputFile: string,
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    ffmpeg(inputFile)
-      .setStartTime(startTime)
-      .setDuration(duration)
-      .outputOptions(['-c:v libx264', '-c:a aac'])
-      .output(outputFile)
-      .on('end', () => resolve(outputFile))
-      .on('error', (err) => reject(new Error(`Failed to extract segment: ${err.message}`)))
-      .run();
-  });
-}
-
-async function loopVideo(
-  inputFile: string,
-  targetDuration: number,
-  outputFile: string,
-  tempDir: string,
-): Promise<string> {
-  const duration = await getVideoDuration(inputFile);
-  const loopsNeeded = Math.ceil(targetDuration / duration);
-
-  const concatFile = path.join(tempDir, 'concat.txt');
-  const concatContent = Array(loopsNeeded)
-    .fill(`file '${inputFile.replace(/'/g, "'\\''")}'`)
-    .join('\n');
-
-  fs.writeFileSync(concatFile, concatContent);
-
-  return new Promise((resolve, reject) => {
-    ffmpeg()
-      .input(concatFile)
-      .inputOptions(['-f concat', '-safe 0'])
-      .setDuration(targetDuration)
-      .outputOptions(['-c:v libx264', '-c:a aac'])
-      .output(outputFile)
-      .on('end', () => resolve(outputFile))
-      .on('error', (err) => reject(new Error(`Failed to loop video: ${err.message}`)))
-      .run();
-  });
 }
 
 function wrapText(text: string, maxCharsPerLine = 30): string {
@@ -166,197 +92,184 @@ function wrapText(text: string, maxCharsPerLine = 30): string {
     lines.push(currentLine);
   }
 
-  return lines.join('\n');
+  return lines.join('\\n');
+}
+
+async function processVideoWithRendi(
+  hook: string,
+  audioUrl: string | null,
+  outputPath: string,
+): Promise<void> {
+  console.log('\n🎬 Processing video with Rendi...');
+
+  const rendiClient = createRendiClient(Env.RENDI_API_KEY);
+
+  // Step 1: Extract and resize segment to 1080x1920
+  console.log('\n✂️  Extracting and resizing video segment...');
+
+  // Pick a random start time (assuming bRoll is at least 30s long)
+  const randomStartTime = Math.floor(Math.random() * 30);
+  const duration = 7;
+
+  const resizeCommand =
+    `-ss ${randomStartTime} -t ${duration} -i {{in_broll}} ` +
+    `-vf "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920" ` +
+    `-c:v libx264 -c:a aac -preset medium -crf 23 -pix_fmt yuv420p {{out_resized}}`;
+
+  const resizeResult = await rendiClient.runFFmpegCommand({
+    ffmpeg_command: resizeCommand,
+    input_files: {
+      in_broll: RENDI_CONFIG.bRollUrl,
+    },
+    output_files: {
+      out_resized: 'resized.mp4',
+    },
+  });
+
+  console.log(`Command submitted: ${resizeResult.command_id}`);
+  const resizeOutput = await rendiClient.pollCommandStatus(resizeResult.command_id);
+  const resizedVideoUrl = resizeOutput.out_resized!.storage_url;
+  console.log(`✅ Video resized: ${resizedVideoUrl}`);
+
+  // Step 2: Add text overlays and audio
+  console.log('\n🎨 Adding text overlays and audio...');
+
+  const mainText = hook;
+  const subText = '(Read caption)';
+
+  const escapeForDrawtext = (text: string): string => {
+    return text.replace(/\\/g, '\\\\\\\\').replace(/'/g, "\\\\\\\\'").replace(/:/g, '\\\\:');
+  };
+
+  const mainLines = wrapText(mainText, 30).split('\\n');
+  const subLines = wrapText(subText, 25).split('\\n');
+
+  const targetHeight = 1920;
+  const mainFontSize = 60;
+  const mainLineSpacing = 20;
+  const mainTotalHeight = mainLines.length * mainFontSize + (mainLines.length - 1) * mainLineSpacing;
+  const mainStartY = targetHeight / 2 - mainTotalHeight / 2 - 100;
+
+  const subFontSize = 40;
+  const subLineSpacing = 15;
+  const subStartY = mainStartY + mainTotalHeight + 80;
+
+  const drawtextFilters: string[] = [];
+
+  mainLines.forEach((line, index) => {
+    const yPos = mainStartY + index * (mainFontSize + mainLineSpacing);
+    const escapedLine = escapeForDrawtext(line);
+    drawtextFilters.push(
+      `drawtext=fontfile=${DEFAULTS.fontPath}:` +
+        `text='${escapedLine}':` +
+        `fontcolor=white:` +
+        `fontsize=${mainFontSize}:` +
+        `x=(w-text_w)/2:` +
+        `y=${yPos}:` +
+        `borderw=3:` +
+        `bordercolor=black`,
+    );
+  });
+
+  subLines.forEach((line, index) => {
+    const yPos = subStartY + index * (subFontSize + subLineSpacing);
+    const escapedLine = escapeForDrawtext(line);
+    drawtextFilters.push(
+      `drawtext=fontfile=${DEFAULTS.fontPath}:` +
+        `text='${escapedLine}':` +
+        `fontcolor=white:` +
+        `fontsize=${subFontSize}:` +
+        `x=(w-text_w)/2:` +
+        `y=${yPos}:` +
+        `enable='gte(t,4)':` +
+        `borderw=2:` +
+        `bordercolor=black`,
+    );
+  });
+
+  // Build FFmpeg command with optional audio
+  let overlayCommand: string;
+  let inputFiles: Record<string, string>;
+  let audioFilter = '';
+
+  if (audioUrl) {
+    inputFiles = {
+      in_video: resizedVideoUrl,
+      in_audio: audioUrl,
+    };
+
+    audioFilter =
+      ` -filter_complex "[0:a][1:a]amix=inputs=2:duration=shortest:dropout_transition=2[aout]" ` +
+      `-map "[aout]"`;
+
+    overlayCommand =
+      `-i {{in_video}} -i {{in_audio}} ` +
+      `-vf "${drawtextFilters.join(',')}" ` +
+      audioFilter +
+      ` -map 0:v -c:v libx264 -c:a aac -b:a 192k -preset medium -b:v 8000k -r 24 -pix_fmt yuv420p {{out_final}}`;
+  } else {
+    inputFiles = {
+      in_video: resizedVideoUrl,
+    };
+
+    overlayCommand =
+      `-i {{in_video}} ` +
+      `-vf "${drawtextFilters.join(',')}" ` +
+      `-c:v libx264 -c:a aac -preset medium -b:v 8000k -r 24 -pix_fmt yuv420p {{out_final}}`;
+  }
+
+  const overlayResult = await rendiClient.runFFmpegCommand({
+    ffmpeg_command: overlayCommand,
+    input_files: inputFiles,
+    output_files: {
+      out_final: 'reel.mp4',
+    },
+  });
+
+  console.log(`Command submitted: ${overlayResult.command_id}`);
+  const overlayOutput = await rendiClient.pollCommandStatus(overlayResult.command_id);
+  const finalVideoUrl = overlayOutput.out_final!.storage_url;
+  console.log(`✅ Final video created: ${finalVideoUrl}`);
+
+  // Step 3: Download final video
+  console.log('\n📥 Downloading final video...');
+  await rendiClient.downloadFileByUrl(finalVideoUrl, outputPath);
+  console.log(`✅ Video saved: ${outputPath}`);
 }
 
 export async function generateReadCaptionReel(): Promise<ReadCaptionResult> {
-  const inputFile = DEFAULTS.bRollPath;
+  const audioUrl = getRandomAudioUrl();
 
-  if (!fs.existsSync(inputFile)) {
-    throw new Error(`Video file not found: ${inputFile}`);
-  }
+  console.log('Generating text and captions...');
 
-  const audioFile = getRandomAudioFile();
+  const { hook, caption, cta } = await generateTextWithLLM();
+  console.log('----------------Hook----------------:\n', hook);
+  console.log('----------------Caption----------------:\n', caption);
+  console.log('----------------CTA----------------:\n', cta);
 
-  console.log(`Getting video duration from ${inputFile}...`);
-  const duration = await getVideoDuration(inputFile);
-  console.log(`Video duration: ${duration.toFixed(2)} seconds`);
+  const outputFolder = createOutputFolder();
+  const outputPath = path.join(outputFolder, 'reel.mp4');
 
-  let startTime = 0;
-  if (duration < 7) {
-    console.log('Video is shorter than 7 seconds, will loop to fill 7 seconds');
-  } else {
-    startTime = Math.random() * (duration - 7);
-  }
+  await processVideoWithRendi(hook, audioUrl, outputPath);
 
-  console.log(`Extracting segment starting at ${startTime.toFixed(2)} seconds...`);
+  const captionContent = `${hook}\n\n${caption}\n\n${cta}`;
+  const captionPath = path.join(outputFolder, 'caption.txt');
+  await fsPromises.writeFile(captionPath, captionContent);
+  console.log(`Caption saved: ${captionPath}`);
 
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'video-reel-'));
-  const tempSegment = path.join(tempDir, 'segment.mp4');
-  const tempResized = path.join(tempDir, 'resized.mp4');
+  console.log('\n' + '='.repeat(60));
+  console.log('ALL DONE!');
+  console.log('='.repeat(60));
+  console.log(`Folder: ${outputFolder}`);
+  console.log(`Video: ${outputPath}`);
+  console.log(`Caption: ${captionPath}`);
 
-  try {
-    if (duration < 7) {
-      const tempFull = path.join(tempDir, 'full.mp4');
-      await extractSegment(inputFile, 0, duration, tempFull);
-      await loopVideo(tempFull, 7, tempSegment, tempDir);
-    } else {
-      await extractSegment(inputFile, startTime, 7, tempSegment);
-    }
-
-    console.log('Resizing to 9:16 aspect ratio (1080x1920)...');
-
-    const targetHeight = 1920;
-
-    await new Promise<void>((resolve, reject) => {
-      ffmpeg(tempSegment)
-        .outputOptions([
-          '-vf',
-          `scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920`,
-          '-c:v',
-          'libx264',
-          '-c:a',
-          'aac',
-        ])
-        .output(tempResized)
-        .on('end', () => resolve())
-        .on('error', (err) => reject(new Error(`Failed to resize: ${err.message}`)))
-        .run();
-    });
-
-    const outputFolder = createOutputFolder();
-    const outputPath = path.join(outputFolder, 'reel.mp4');
-
-    console.log('Generating text and captions...');
-
-    const { hook, caption, cta } = await generateTextWithLLM();
-    console.log('----------------Hook----------------:\n', hook);
-    console.log('----------------Caption----------------:\n', caption);
-    console.log('----------------CTA----------------:\n', cta);
-
-    const mainText = hook;
-    const subText = '(Read caption)';
-
-    const mainLines = wrapText(mainText, 30).split('\n');
-    const subLines = wrapText(subText, 25).split('\n');
-
-    console.log('Main text will be displayed as:');
-    mainLines.forEach((line, i) => console.log(`  Line ${i + 1}: ${line}`));
-
-    const escapeForDrawtext = (text: string): string => {
-      return text
-        .replace(/\\/g, '\\\\')
-        .replace(/'/g, "\\\\'")
-        .replace(/:/g, '\\:');
-    };
-
-    const mainFontSize = 60;
-    const mainLineSpacing = 20;
-    const mainTotalHeight = mainLines.length * mainFontSize + (mainLines.length - 1) * mainLineSpacing;
-    const mainStartY = targetHeight / 2 - mainTotalHeight / 2 - 100;
-
-    const subFontSize = 40;
-    const subLineSpacing = 15;
-    const subStartY = mainStartY + mainTotalHeight + 80;
-
-    const drawtextFilters: string[] = [];
-
-    mainLines.forEach((line, index) => {
-      const yPos = mainStartY + index * (mainFontSize + mainLineSpacing);
-      const escapedLine = escapeForDrawtext(line);
-      drawtextFilters.push(
-        `drawtext=fontfile=${DEFAULTS.fontPath}:` +
-          `text='${escapedLine}':` +
-          `fontcolor=white:` +
-          `fontsize=${mainFontSize}:` +
-          `x=(w-text_w)/2:` +
-          `y=${yPos}:` +
-          `borderw=3:` +
-          `bordercolor=black`,
-      );
-    });
-
-    subLines.forEach((line, index) => {
-      const yPos = subStartY + index * (subFontSize + subLineSpacing);
-      const escapedLine = escapeForDrawtext(line);
-      drawtextFilters.push(
-        `drawtext=fontfile=${DEFAULTS.fontPath}:` +
-          `text='${escapedLine}':` +
-          `fontcolor=white:` +
-          `fontsize=${subFontSize}:` +
-          `x=(w-text_w)/2:` +
-          `y=${yPos}:` +
-          `enable='gte(t,4)':` +
-          `borderw=2:` +
-          `bordercolor=black`,
-      );
-    });
-
-    console.log(`Exporting to ${outputPath}...`);
-
-    const ffmpegCommand = ffmpeg(tempResized);
-
-    if (audioFile) {
-      console.log('Adding background audio...');
-      ffmpegCommand.input(audioFile);
-    }
-
-    const outputOptions: string[] = [
-      '-vf',
-      drawtextFilters.join(','),
-      '-c:v',
-      'libx264',
-      '-preset',
-      'medium',
-      '-b:v',
-      '8000k',
-      '-r',
-      '24',
-    ];
-
-    if (audioFile) {
-      outputOptions.push(
-        '-filter_complex',
-        '[0:a][1:a]amix=inputs=2:duration=shortest:dropout_transition=2[aout]',
-        '-map',
-        '0:v',
-        '-map',
-        '[aout]',
-        '-c:a',
-        'aac',
-        '-b:a',
-        '192k',
-      );
-    } else {
-      outputOptions.push('-c:a', 'aac');
-    }
-
-    await new Promise<string>((resolve, reject) => {
-      ffmpegCommand
-        .outputOptions(outputOptions)
-        .output(outputPath)
-        .on('end', () => {
-          console.log(`\nVideo exported successfully to: ${outputPath}`);
-          resolve(outputPath);
-        })
-        .on('error', (err) => reject(new Error(`Failed to add captions: ${err.message}`)))
-        .run();
-    });
-
-    const captionContent = `${hook}\n\n${caption}\n\n${cta}`;
-    const captionPath = path.join(outputFolder, 'caption.txt');
-    await fsPromises.writeFile(captionPath, captionContent);
-    console.log(`Caption saved: ${captionPath}`);
-
-    return {
-      outputFolder,
-      videoPath: outputPath,
-      captionPath,
-      hook,
-      caption,
-      cta,
-    };
-  } finally {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-  }
+  return {
+    outputFolder,
+    videoPath: outputPath,
+    captionPath,
+    hook,
+    caption,
+    cta,
+  };
 }

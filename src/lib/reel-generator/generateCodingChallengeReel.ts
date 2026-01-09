@@ -1,13 +1,16 @@
+/* eslint-disable no-console */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
-import ffmpeg from 'fluent-ffmpeg';
 import puppeteer, { type Browser } from 'puppeteer';
 import { getHighlighter } from 'shiki';
 
-import { CODING_CHALLENGE_PROMPT, DEFAULTS } from './constants';
+import { Env } from '@/libs/Env';
+
+import { createRendiClient } from '../rendi/client';
+import { CODING_CHALLENGE_PROMPT, DEFAULTS, RENDI_CONFIG } from './constants';
 import type { CodingChallengeResult, CodingSnippet } from './types';
 
 function getTimestampedFolder(): string {
@@ -55,85 +58,23 @@ async function generateSnippetWithAI(): Promise<CodingSnippet> {
   }
 }
 
-async function getVideoDuration(videoPath: string): Promise<number> {
-  return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(videoPath, (err, metadata) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(metadata.format.duration || 0);
-      }
-    });
-  });
-}
-
-async function getRandomAudioFile(audioFolder: string): Promise<string> {
+async function getRandomAudioUrl(): Promise<string> {
   console.log('\nSelecting random audio file...');
 
-  const files = await fs.readdir(audioFolder);
-
-  const audioFiles = files.filter((file) => {
-    const ext = path.extname(file).toLowerCase();
-    return ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac'].includes(ext);
-  });
+  const audioFiles = RENDI_CONFIG.audioFiles;
 
   if (audioFiles.length === 0) {
-    throw new Error(`No audio files found in ${audioFolder}`);
+    throw new Error('No audio files configured in RENDI_CONFIG');
   }
 
   const randomIndex = Math.floor(Math.random() * audioFiles.length);
-  const selectedAudio = audioFiles[randomIndex];
-  const audioPath = path.join(audioFolder, selectedAudio!);
+  const selectedAudio = audioFiles[randomIndex]!;
+  const audioUrl = `${RENDI_CONFIG.audioFolderUrl}/${selectedAudio}`;
 
   console.log(`Selected audio: ${selectedAudio}`);
+  console.log(`Audio URL: ${audioUrl}`);
 
-  return audioPath;
-}
-
-async function extractRandomVideoSegment(
-  inputVideo: string,
-  outputVideo: string,
-  duration: number,
-): Promise<void> {
-  console.log('\nExtracting random segment from b-roll video...');
-
-  const totalDuration = await getVideoDuration(inputVideo);
-  const maxStartTime = Math.max(0, totalDuration - duration);
-  const startTime = Math.random() * maxStartTime;
-
-  console.log(`B-roll duration: ${totalDuration.toFixed(2)}s`);
-  console.log(`Extracting ${duration}s from ${startTime.toFixed(2)}s`);
-
-  return new Promise((resolve, reject) => {
-    ffmpeg(inputVideo)
-      .setStartTime(startTime)
-      .setDuration(duration)
-      .outputOptions([
-        '-c:v libx264',
-        '-pix_fmt yuv420p',
-        '-vf scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920',
-        '-preset medium',
-        '-crf 23',
-      ])
-      .output(outputVideo)
-      .on('start', (commandLine) => {
-        console.log('FFmpeg command:', commandLine);
-      })
-      .on('progress', (progress) => {
-        if (progress.percent) {
-          process.stdout.write(`\rProgress: ${Math.round(progress.percent)}%`);
-        }
-      })
-      .on('end', () => {
-        console.log(`\nVideo segment extracted: ${outputVideo}`);
-        resolve();
-      })
-      .on('error', (err) => {
-        console.error('\nFFmpeg error:', err.message);
-        reject(new Error('Failed to extract video segment.'));
-      })
-      .run();
-  });
+  return audioUrl;
 }
 
 interface HtmlOptions {
@@ -302,78 +243,104 @@ async function renderSnippet(
   console.log(`Rendered: ${outputPath}`);
 }
 
-async function overlayCodeOnVideoWithAudio(
-  backgroundVideo: string,
-  overlayImage: string,
-  audioPath: string,
-  outputVideo: string,
+async function processVideoWithRendi(
+  screenshotPath: string,
+  audioUrl: string,
+  outputPath: string,
   duration: number,
   difficulty: string,
 ): Promise<void> {
-  console.log('\nOverlaying code snippet on background video and adding audio...');
+  console.log('\n🎬 Processing video with Rendi...');
+
+  const rendiClient = createRendiClient(Env.RENDI_API_KEY);
+
+  // Step 1: Upload screenshot to Rendi
+  console.log('\n📤 Uploading screenshot to Rendi...');
+  const screenshotBuffer = await fs.readFile(screenshotPath);
+  const screenshotUpload = await rendiClient.uploadFile(
+    screenshotBuffer,
+    'code-screenshot.png',
+    'image/png',
+  );
+  console.log(`✅ Screenshot uploaded: ${screenshotUpload.file_id}`);
+
+  // Step 2: Extract random segment from bRoll video
+  console.log('\n✂️  Extracting random segment from b-roll video...');
+
+  // We need to know the total duration of the bRoll to pick a random start time
+  // For now, we'll assume a typical length or use a fixed start time
+  // In a production setup, you could store this metadata or use Rendi's FFprobe
+  const randomStartTime = Math.floor(Math.random() * 30); // Assume bRoll is at least 30s long
+
+  const extractCommand = `-ss ${randomStartTime} -t ${duration} -i {{in_broll}} -vf "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920" -c:v libx264 -crf 23 -preset medium -pix_fmt yuv420p {{out_segment}}`;
+
+  const extractResult = await rendiClient.runFFmpegCommand({
+    ffmpeg_command: extractCommand,
+    input_files: {
+      in_broll: RENDI_CONFIG.bRollUrl,
+    },
+    output_files: {
+      out_segment: 'broll_segment.mp4',
+    },
+  });
+
+  console.log(`Command submitted: ${extractResult.command_id}`);
+  const extractOutput = await rendiClient.pollCommandStatus(extractResult.command_id);
+  const segmentUrl = extractOutput.out_segment!.storage_url;
+  console.log(`✅ Segment extracted: ${segmentUrl}`);
+
+  // Step 3: Overlay code screenshot and add audio
+  console.log('\n🎨 Overlaying code and adding audio...');
 
   const levelY = 840;
+  const levelAppearTime = DEFAULTS.levelAppearTime;
 
-  return new Promise((resolve, reject) => {
-    ffmpeg()
-      .input(backgroundVideo)
-      .input(overlayImage)
-      .input(audioPath)
-      .complexFilter([
-        '[1:v]scale=1080:1920[overlay]',
-        '[0:v][overlay]overlay=0:0[video_base]',
-        `[video_base]drawtext=` +
-          `text='LEVEL\\: ${difficulty}':` +
-          `fontfile=/System/Library/Fonts/Supplemental/Arial\\ Bold.ttf:` +
-          `fontsize=42:` +
-          `fontcolor=#818cf8:` +
-          `borderw=2:` +
-          `bordercolor=black:` +
-          `x=(w-text_w)/2:` +
-          `y=${levelY}:` +
-          `enable='gte(t,${DEFAULTS.levelAppearTime})':` +
-          `alpha='if(lt(t,${DEFAULTS.levelAppearTime}),0,if(lt(t,${DEFAULTS.levelAppearTime + 0.3}),(t-${DEFAULTS.levelAppearTime})/0.3,1))'` +
-          `[video]`,
-        `[2:a]atrim=0:${duration},asetpts=PTS-STARTPTS[audio]`,
-      ])
-      .outputOptions([
-        '-map [video]',
-        '-map [audio]',
-        '-c:v libx264',
-        '-c:a aac',
-        '-b:a 192k',
-        `-t ${duration}`,
-        '-pix_fmt yuv420p',
-        '-preset medium',
-        '-crf 23',
-        '-shortest',
-      ])
-      .output(outputVideo)
-      .on('start', (commandLine) => {
-        console.log('FFmpeg command:', commandLine);
-      })
-      .on('progress', (progress) => {
-        if (progress.percent) {
-          process.stdout.write(`\rProgress: ${Math.round(progress.percent)}%`);
-        }
-      })
-      .on('end', () => {
-        console.log(`\nFinal video with audio and level text created: ${outputVideo}`);
-        resolve();
-      })
-      .on('error', (err) => {
-        console.error('\nFFmpeg error:', err.message);
-        reject(new Error('Failed to overlay code on video with audio.'));
-      })
-      .run();
+  const overlayCommand
+    = `-i {{in_segment}} -i {{in_screenshot}} -i {{in_audio}} -filter_complex `
+    + `"[1:v]scale=1080:1920[overlay];`
+    + `[0:v][overlay]overlay=0:0[video_base];`
+    + `[video_base]drawtext=`
+    + `text='LEVEL\\\\: ${difficulty}':`
+    + `fontfile=/System/Library/Fonts/Supplemental/Arial\\\\ Bold.ttf:`
+    + `fontsize=42:`
+    + `fontcolor=#818cf8:`
+    + `borderw=2:`
+    + `bordercolor=black:`
+    + `x=(w-text_w)/2:`
+    + `y=${levelY}:`
+    + `enable='gte(t,${levelAppearTime})':`
+    + `alpha='if(lt(t,${levelAppearTime}),0,if(lt(t,${levelAppearTime + 0.3}),(t-${levelAppearTime})/0.3,1))'`
+    + `[video];`
+    + `[2:a]atrim=0:${duration},asetpts=PTS-STARTPTS[audio]" `
+    + `-map "[video]" -map "[audio]" -c:v libx264 -c:a aac -b:a 192k -t ${duration} -crf 23 -preset medium -pix_fmt yuv420p {{out_final}}`;
+
+  const overlayResult = await rendiClient.runFFmpegCommand({
+    ffmpeg_command: overlayCommand,
+    input_files: {
+      in_segment: segmentUrl,
+      in_screenshot: screenshotUpload.storage_url,
+      in_audio: audioUrl,
+    },
+    output_files: {
+      out_final: 'reel.mp4',
+    },
   });
+
+  console.log(`Command submitted: ${overlayResult.command_id}`);
+  const overlayOutput = await rendiClient.pollCommandStatus(overlayResult.command_id);
+  const finalVideoUrl = overlayOutput.out_final!.storage_url;
+  console.log(`✅ Final video created: ${finalVideoUrl}`);
+
+  // Step 4: Download final video
+  console.log('\n📥 Downloading final video...');
+  await rendiClient.downloadFileByUrl(finalVideoUrl, outputPath);
+  console.log(`✅ Video saved: ${outputPath}`);
 }
 
 export async function generateCodingChallengeReel(): Promise<CodingChallengeResult> {
   const timestampFolder = getTimestampedFolder();
   const outputDir = path.join(DEFAULTS.outputDir, timestampFolder);
   const imagePath = path.join(outputDir, 'snippet.png');
-  const bRollSegmentPath = path.join(outputDir, 'broll_segment.mp4');
   const videoPath = path.join(outputDir, 'reel.mp4');
   const captionPath = path.join(outputDir, 'caption.txt');
 
@@ -381,18 +348,6 @@ export async function generateCodingChallengeReel(): Promise<CodingChallengeResu
   console.log(`\nOutput directory: ${outputDir}\n`);
 
   const duration = DEFAULTS.videoDuration;
-
-  try {
-    await fs.access(DEFAULTS.bRollPath);
-  } catch {
-    throw new Error(`B-roll video not found at: ${DEFAULTS.bRollPath}`);
-  }
-
-  try {
-    await fs.access(DEFAULTS.audioFolder);
-  } catch {
-    throw new Error(`Audio folder not found at: ${DEFAULTS.audioFolder}`);
-  }
 
   console.log(`Generating 1 code snippet for a ${duration}s video...\n`);
 
@@ -407,25 +362,16 @@ export async function generateCodingChallengeReel(): Promise<CodingChallengeResu
 
     await renderSnippet(snippet.code, imagePath, browser);
 
-    await extractRandomVideoSegment(DEFAULTS.bRollPath, bRollSegmentPath, duration);
+    const audioUrl = await getRandomAudioUrl();
 
-    const audioPath = await getRandomAudioFile(DEFAULTS.audioFolder);
-
-    await overlayCodeOnVideoWithAudio(
-      bRollSegmentPath,
-      imagePath,
-      audioPath,
-      videoPath,
-      duration,
-      snippet.difficulty,
-    );
+    await processVideoWithRendi(imagePath, audioUrl, videoPath, duration, snippet.difficulty);
 
     const captionContent =
       `==================== REEL ====================\n` +
       `DIFFICULTY: ${snippet.difficulty}\n\n` +
       `CODE:\n${snippet.code}\n\n` +
       `CAPTION:\n${snippet.caption}\n\n` +
-      `AUDIO: ${path.basename(audioPath)}\n`;
+      `AUDIO: ${audioUrl}\n`;
 
     await fs.writeFile(captionPath, captionContent);
     console.log(`Caption saved: ${captionPath}`);
@@ -437,17 +383,15 @@ export async function generateCodingChallengeReel(): Promise<CodingChallengeResu
     console.log(`Video: ${videoPath}`);
     console.log(`Caption: ${captionPath}`);
     console.log(`Image: ${imagePath}`);
-    console.log(`B-roll segment: ${bRollSegmentPath}`);
-    console.log(`Audio: ${path.basename(audioPath)}`);
-    console.log(`Level appears at: ${DEFAULTS.levelAppearTime}s`);
+    console.log(`Audio: ${audioUrl}`);
 
     return {
       outputDir,
       videoPath,
       captionPath,
       imagePath,
-      bRollSegmentPath,
-      audioPath,
+      bRollSegmentPath: '', // No longer stored locally with Rendi
+      audioPath: audioUrl,
       snippet,
     };
   } finally {

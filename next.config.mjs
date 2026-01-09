@@ -25,7 +25,7 @@ export default withSentryConfig(
       poweredByHeader: false,
       reactStrictMode: true,
       experimental: {
-        serverComponentsExternalPackages: ['@electric-sql/pglite', 'puppeteer', 'fluent-ffmpeg', 'shiki'],
+        serverComponentsExternalPackages: ['@electric-sql/pglite', 'puppeteer', 'shiki'],
       },
     }),
   ),
