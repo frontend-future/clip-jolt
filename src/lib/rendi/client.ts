@@ -32,7 +32,13 @@ export class RendiClient {
    */
   async uploadFile(file: Buffer, filename: string, contentType?: string): Promise<UploadFileResponse> {
     const formData = new FormData();
-    const blob = new Blob([file], { type: contentType || 'application/octet-stream' });
+    // Convert Buffer to a fresh ArrayBuffer by copying the data
+    const arrayBuffer = new ArrayBuffer(file.length);
+    const view = new Uint8Array(arrayBuffer);
+    for (let i = 0; i < file.length; i++) {
+      view[i] = file[i]!;
+    }
+    const blob = new Blob([arrayBuffer], { type: contentType || 'application/octet-stream' });
     formData.append('file', blob, filename);
 
     const response = await fetch(`${RENDI_API_BASE}/v1/files/upload`, {
@@ -151,7 +157,7 @@ export class RendiClient {
       }
 
       // Still processing, wait before next poll
-      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
     }
 
     throw new Error(`Command ${commandId} timeout after ${maxAttempts * pollInterval}ms`);

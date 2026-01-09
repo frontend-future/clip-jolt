@@ -2,8 +2,8 @@ import path from 'node:path';
 
 import { NextResponse } from 'next/server';
 
-import { generateReadCaptionReel } from '@/lib/reel-generator';
 import type { GenerateResponse, ReadCaptionResult } from '@/lib/reel-generator';
+import { generateReadCaptionReel } from '@/lib/reel-generator';
 
 // Increase timeout for video generation (5 minutes)
 export const maxDuration = 300;

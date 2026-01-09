@@ -13,20 +13,20 @@ import { createRendiClient } from '../rendi/client';
 import { DEFAULTS, MAIN_TEXT_PROMPT, RENDI_CONFIG } from './constants';
 import type { ReadCaptionResult } from './types';
 
-interface GeneratedText {
+type GeneratedText = {
   hook: string;
   caption: string;
   cta: string;
-}
+};
 
 async function generateTextWithLLM(): Promise<GeneratedText> {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('Missing OPENAI_API_KEY. Set it to run the OpenAI warmup call.');
   }
 
-  const variationPrompt =
-    MAIN_TEXT_PROMPT +
-    `
+  const variationPrompt
+    = `${MAIN_TEXT_PROMPT
+    }
 
 IMPORTANT: You must generate a UNIQUE and DIFFERENT hook each time. Do NOT repeat the same hook. Vary the number, wording, and angle. Choose from the approved templates or create a new variation that matches the tone and style. Each generation should feel fresh and different from previous ones.`;
 
@@ -44,15 +44,15 @@ IMPORTANT: You must generate a UNIQUE and DIFFERENT hook each time. Do NOT repea
 }
 
 function getRandomAudioUrl(): string | null {
-  const audioFiles = RENDI_CONFIG.audioFiles;
+  const audioFiles = [...RENDI_CONFIG.audioFiles];
 
   if (audioFiles.length === 0) {
     console.log('Warning: no audio files configured, proceeding without background music');
     return null;
   }
 
-  const randomAudio = audioFiles[Math.floor(Math.random() * audioFiles.length)];
-  const audioUrl = `${RENDI_CONFIG.audioFolderUrl}/${randomAudio}`;
+  const randomAudioId = audioFiles[Math.floor(Math.random() * audioFiles.length)];
+  const audioUrl = `${RENDI_CONFIG.audioFolderUrl}${randomAudioId}`;
   console.log(`Selected random audio: ${audioUrl}`);
 
   return audioUrl;
@@ -111,10 +111,10 @@ async function processVideoWithRendi(
   const randomStartTime = Math.floor(Math.random() * 30);
   const duration = 7;
 
-  const resizeCommand =
-    `-ss ${randomStartTime} -t ${duration} -i {{in_broll}} ` +
-    `-vf "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920" ` +
-    `-c:v libx264 -c:a aac -preset medium -crf 23 -pix_fmt yuv420p {{out_resized}}`;
+  const resizeCommand
+    = `-ss ${randomStartTime} -t ${duration} -i {{in_broll}} `
+      + `-vf "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920" `
+      + `-c:v libx264 -c:a aac -preset medium -crf 23 -pix_fmt yuv420p {{out_resized}}`;
 
   const resizeResult = await rendiClient.runFFmpegCommand({
     ffmpeg_command: resizeCommand,
@@ -138,7 +138,7 @@ async function processVideoWithRendi(
   const subText = '(Read caption)';
 
   const escapeForDrawtext = (text: string): string => {
-    return text.replace(/\\/g, '\\\\\\\\').replace(/'/g, "\\\\\\\\'").replace(/:/g, '\\\\:');
+    return text.replace(/\\/g, '\\\\\\\\').replace(/'/g, '\\\\\\\\\'').replace(/:/g, '\\\\:');
   };
 
   const mainLines = wrapText(mainText, 30).split('\\n');
@@ -156,18 +156,21 @@ async function processVideoWithRendi(
 
   const drawtextFilters: string[] = [];
 
+  // Use placeholder for font file - Rendi will download from URL
+  const fontPlaceholder = '{{in_font}}';
+
   mainLines.forEach((line, index) => {
     const yPos = mainStartY + index * (mainFontSize + mainLineSpacing);
     const escapedLine = escapeForDrawtext(line);
     drawtextFilters.push(
-      `drawtext=fontfile=${DEFAULTS.fontPath}:` +
-        `text='${escapedLine}':` +
-        `fontcolor=white:` +
-        `fontsize=${mainFontSize}:` +
-        `x=(w-text_w)/2:` +
-        `y=${yPos}:` +
-        `borderw=3:` +
-        `bordercolor=black`,
+      `drawtext=fontfile=${fontPlaceholder}:`
+      + `text='${escapedLine}':`
+      + `fontcolor=white:`
+      + `fontsize=${mainFontSize}:`
+      + `x=(w-text_w)/2:`
+      + `y=${yPos}:`
+      + `borderw=3:`
+      + `bordercolor=black`,
     );
   });
 
@@ -175,15 +178,15 @@ async function processVideoWithRendi(
     const yPos = subStartY + index * (subFontSize + subLineSpacing);
     const escapedLine = escapeForDrawtext(line);
     drawtextFilters.push(
-      `drawtext=fontfile=${DEFAULTS.fontPath}:` +
-        `text='${escapedLine}':` +
-        `fontcolor=white:` +
-        `fontsize=${subFontSize}:` +
-        `x=(w-text_w)/2:` +
-        `y=${yPos}:` +
-        `enable='gte(t,4)':` +
-        `borderw=2:` +
-        `bordercolor=black`,
+      `drawtext=fontfile=${fontPlaceholder}:`
+      + `text='${escapedLine}':`
+      + `fontcolor=white:`
+      + `fontsize=${subFontSize}:`
+      + `x=(w-text_w)/2:`
+      + `y=${yPos}:`
+      + `enable='gte(t,4)':`
+      + `borderw=2:`
+      + `bordercolor=black`,
     );
   });
 
@@ -196,26 +199,28 @@ async function processVideoWithRendi(
     inputFiles = {
       in_video: resizedVideoUrl,
       in_audio: audioUrl,
+      in_font: RENDI_CONFIG.fontUrl,
     };
 
-    audioFilter =
-      ` -filter_complex "[0:a][1:a]amix=inputs=2:duration=shortest:dropout_transition=2[aout]" ` +
-      `-map "[aout]"`;
+    audioFilter
+      = ` -filter_complex "[0:a][1:a]amix=inputs=2:duration=shortest:dropout_transition=2[aout]" `
+        + `-map "[aout]"`;
 
-    overlayCommand =
-      `-i {{in_video}} -i {{in_audio}} ` +
-      `-vf "${drawtextFilters.join(',')}" ` +
-      audioFilter +
-      ` -map 0:v -c:v libx264 -c:a aac -b:a 192k -preset medium -b:v 8000k -r 24 -pix_fmt yuv420p {{out_final}}`;
+    overlayCommand
+      = `-i {{in_video}} -i {{in_audio}} `
+        + `-vf "${drawtextFilters.join(',')}" ${
+          audioFilter
+        } -map 0:v -c:v libx264 -c:a aac -b:a 192k -preset medium -b:v 8000k -r 24 -pix_fmt yuv420p {{out_final}}`;
   } else {
     inputFiles = {
       in_video: resizedVideoUrl,
+      in_font: RENDI_CONFIG.fontUrl,
     };
 
-    overlayCommand =
-      `-i {{in_video}} ` +
-      `-vf "${drawtextFilters.join(',')}" ` +
-      `-c:v libx264 -c:a aac -preset medium -b:v 8000k -r 24 -pix_fmt yuv420p {{out_final}}`;
+    overlayCommand
+      = `-i {{in_video}} `
+        + `-vf "${drawtextFilters.join(',')}" `
+        + `-c:v libx264 -c:a aac -preset medium -b:v 8000k -r 24 -pix_fmt yuv420p {{out_final}}`;
   }
 
   const overlayResult = await rendiClient.runFFmpegCommand({
@@ -257,7 +262,7 @@ export async function generateReadCaptionReel(): Promise<ReadCaptionResult> {
   await fsPromises.writeFile(captionPath, captionContent);
   console.log(`Caption saved: ${captionPath}`);
 
-  console.log('\n' + '='.repeat(60));
+  console.log(`\n${'='.repeat(60)}`);
   console.log('ALL DONE!');
   console.log('='.repeat(60));
   console.log(`Folder: ${outputFolder}`);

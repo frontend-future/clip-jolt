@@ -9,45 +9,45 @@ import type { Buffer } from 'node:buffer';
 // File Storage API Types
 // ============================================================================
 
-export interface UploadFileRequest {
+export type UploadFileRequest = {
   file: Buffer | Blob;
   filename: string;
   content_type?: string;
-}
+};
 
-export interface UploadFileResponse {
+export type UploadFileResponse = {
   file_id: string;
   storage_url: string;
   filename: string;
   size_bytes: number;
   content_type: string;
   created_at: string;
-}
+};
 
-export interface GetFileResponse {
+export type GetFileResponse = {
   file_id: string;
   storage_url: string;
   filename: string;
   size_bytes: number;
   content_type: string;
   created_at: string;
-}
+};
 
 // ============================================================================
 // FFmpeg Command API Types
 // ============================================================================
 
-export interface RunFFmpegCommandRequest {
+export type RunFFmpegCommandRequest = {
   ffmpeg_command: string;
   input_files: Record<string, string>; // { placeholder: url/file_id }
   output_files: Record<string, string>; // { placeholder: filename }
-}
+};
 
-export interface RunFFmpegCommandResponse {
+export type RunFFmpegCommandResponse = {
   command_id: string;
   status: CommandStatus;
   created_at: string;
-}
+};
 
 export type CommandStatus =
   | 'QUEUED'
@@ -56,7 +56,7 @@ export type CommandStatus =
   | 'FAILED'
   | 'TIMEOUT';
 
-export interface GetCommandStatusResponse {
+export type GetCommandStatusResponse = {
   command_id: string;
   status: CommandStatus;
   created_at: string;
@@ -65,26 +65,26 @@ export interface GetCommandStatusResponse {
   error_message?: string;
   output_files?: Record<string, OutputFile>;
   logs?: string;
-}
+};
 
-export interface OutputFile {
+export type OutputFile = {
   file_id: string;
   storage_url: string;
   filename: string;
   size_bytes: number;
   content_type: string;
-}
+};
 
 // ============================================================================
 // Error Types
 // ============================================================================
 
-export interface RendiErrorResponse {
+export type RendiErrorResponse = {
   error: string;
   message: string;
   status_code: number;
   details?: Record<string, unknown>;
-}
+};
 
 export class RendiError extends Error {
   statusCode: number;
@@ -102,20 +102,20 @@ export class RendiError extends Error {
 // Asset Cache Types (for constants.ts)
 // ============================================================================
 
-export interface RendiAssets {
+export type RendiAssets = {
   bRollFileId: string;
   audioFileIds: Record<string, string>; // { filename: file_id }
-}
+};
 
 // ============================================================================
 // Helper Types
 // ============================================================================
 
-export interface PollOptions {
+export type PollOptions = {
   maxAttempts?: number;
   pollInterval?: number; // milliseconds
-}
+};
 
-export interface DownloadFileOptions {
+export type DownloadFileOptions = {
   outputPath?: string;
-}
+};

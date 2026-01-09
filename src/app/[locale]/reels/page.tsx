@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import { Button } from '@/components/ui/button';
 
 type ReadCaptionReelData = {
@@ -86,15 +87,15 @@ const Reels = () => {
 
   return (
     <div className="container mx-auto p-8">
-      <h1 className="text-3xl font-bold mb-8">Reels</h1>
+      <h1 className="mb-8 text-3xl font-bold">Reels</h1>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+        <div className="mb-4 rounded border border-red-400 bg-red-100 p-4 text-red-700">
           {error}
         </div>
       )}
 
-      <div className="flex flex-col gap-4 max-w-md mb-8">
+      <div className="mb-8 flex max-w-md flex-col gap-4">
         <Button
           onClick={handleGenerateReadCaptionReel}
           disabled={loadingReadCaption || loadingCodingChallenge}
@@ -113,8 +114,8 @@ const Reels = () => {
 
       {/* Read Caption Reel Display */}
       {readCaptionReel && (
-        <div className="mt-8 p-6 bg-gray-50 rounded-lg">
-          <h2 className="text-2xl font-bold mb-4">Read Caption Reel</h2>
+        <div className="mt-8 rounded-lg bg-gray-50 p-6">
+          <h2 className="mb-4 text-2xl font-bold">Read Caption Reel</h2>
           <div className="flex flex-col gap-4">
             <div className="w-full max-w-md">
               <video
@@ -128,15 +129,15 @@ const Reels = () => {
             </div>
             <div className="space-y-2">
               <div>
-                <h3 className="font-semibold text-lg">Hook:</h3>
+                <h3 className="text-lg font-semibold">Hook:</h3>
                 <p className="text-gray-700">{readCaptionReel.hook}</p>
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Caption:</h3>
+                <h3 className="text-lg font-semibold">Caption:</h3>
                 <p className="text-gray-700">{readCaptionReel.caption}</p>
               </div>
               <div>
-                <h3 className="font-semibold text-lg">CTA:</h3>
+                <h3 className="text-lg font-semibold">CTA:</h3>
                 <p className="text-gray-700">{readCaptionReel.cta}</p>
               </div>
               <div className="pt-2">
@@ -155,8 +156,8 @@ const Reels = () => {
 
       {/* Coding Challenge Reel Display */}
       {codingChallengeReel && (
-        <div className="mt-8 p-6 bg-gray-50 rounded-lg">
-          <h2 className="text-2xl font-bold mb-4">Coding Challenge Reel</h2>
+        <div className="mt-8 rounded-lg bg-gray-50 p-6">
+          <h2 className="mb-4 text-2xl font-bold">Coding Challenge Reel</h2>
           <div className="flex flex-col gap-4">
             <div className="w-full max-w-md">
               <video
@@ -170,20 +171,20 @@ const Reels = () => {
             </div>
             <div className="space-y-2">
               <div>
-                <h3 className="font-semibold text-lg">Difficulty:</h3>
+                <h3 className="text-lg font-semibold">Difficulty:</h3>
                 <p className="text-gray-700">{codingChallengeReel.snippet.difficulty}</p>
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Code:</h3>
-                <pre className="bg-gray-800 text-green-400 p-4 rounded overflow-x-auto">
+                <h3 className="text-lg font-semibold">Code:</h3>
+                <pre className="overflow-x-auto rounded bg-gray-800 p-4 text-green-400">
                   <code>{codingChallengeReel.snippet.code}</code>
                 </pre>
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Caption:</h3>
+                <h3 className="text-lg font-semibold">Caption:</h3>
                 <p className="text-gray-700">{codingChallengeReel.snippet.caption}</p>
               </div>
-              <div className="pt-2 flex gap-4">
+              <div className="flex gap-4 pt-2">
                 <a
                   href={codingChallengeReel.videoUrl}
                   download={codingChallengeReel.outputDir}

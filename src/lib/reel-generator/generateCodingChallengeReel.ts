@@ -31,7 +31,7 @@ async function generateSnippetWithAI(): Promise<CodingSnippet> {
   }
 
   console.log('Generating snippet with OpenAI...');
-  console.log('Using API key:', process.env.OPENAI_API_KEY?.slice(0, 10) + '...');
+  console.log('Using API key:', `${process.env.OPENAI_API_KEY?.slice(0, 10)}...`);
 
   try {
     console.log('Calling OpenAI API...');
@@ -43,7 +43,7 @@ async function generateSnippetWithAI(): Promise<CodingSnippet> {
     });
 
     console.log('OpenAI response received');
-    console.log('Raw response:', response.text.slice(0, 100) + '...');
+    console.log('Raw response:', `${response.text.slice(0, 100)}...`);
 
     let cleanText = response.text.trim();
     cleanText = cleanText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
@@ -61,23 +61,23 @@ async function generateSnippetWithAI(): Promise<CodingSnippet> {
 async function getRandomAudioUrl(): Promise<string> {
   console.log('\nSelecting random audio file...');
 
-  const audioFiles = RENDI_CONFIG.audioFiles;
+  const audioFiles = [...RENDI_CONFIG.audioFiles];
 
   if (audioFiles.length === 0) {
     throw new Error('No audio files configured in RENDI_CONFIG');
   }
 
   const randomIndex = Math.floor(Math.random() * audioFiles.length);
-  const selectedAudio = audioFiles[randomIndex]!;
-  const audioUrl = `${RENDI_CONFIG.audioFolderUrl}/${selectedAudio}`;
+  const selectedAudioId = audioFiles[randomIndex]!;
+  const audioUrl = `${RENDI_CONFIG.audioFolderUrl}${selectedAudioId}`;
 
-  console.log(`Selected audio: ${selectedAudio}`);
+  console.log(`Selected audio ID: ${selectedAudioId}`);
   console.log(`Audio URL: ${audioUrl}`);
 
   return audioUrl;
 }
 
-interface HtmlOptions {
+type HtmlOptions = {
   codeHtml: string;
   width: number;
   height: number;
@@ -85,7 +85,7 @@ interface HtmlOptions {
   background: string;
   font: string;
   fontSize: number;
-}
+};
 
 function buildHtml({ codeHtml, width, height, padding, font, fontSize }: HtmlOptions): string {
   return `<!doctype html>
@@ -295,18 +295,19 @@ async function processVideoWithRendi(
   const levelY = 840;
   const levelAppearTime = DEFAULTS.levelAppearTime;
 
+  // Note: Using fontfile with a URL placeholder - Rendi will download the font
   const overlayCommand
     = `-i {{in_segment}} -i {{in_screenshot}} -i {{in_audio}} -filter_complex `
-    + `"[1:v]scale=1080:1920[overlay];`
-    + `[0:v][overlay]overlay=0:0[video_base];`
-    + `[video_base]drawtext=`
-    + `text='LEVEL\\\\: ${difficulty}':`
-    + `fontfile=/System/Library/Fonts/Supplemental/Arial\\\\ Bold.ttf:`
-    + `fontsize=42:`
-    + `fontcolor=#818cf8:`
-    + `borderw=2:`
-    + `bordercolor=black:`
-    + `x=(w-text_w)/2:`
+      + `"[1:v]scale=1080:1920[overlay];`
+      + `[0:v][overlay]overlay=0:0[video_base];`
+      + `[video_base]drawtext=`
+      + `text='LEVEL\\\\: ${difficulty}':`
+      + `fontfile={{in_font}}:`
+      + `fontsize=42:`
+      + `fontcolor=#818cf8:`
+      + `borderw=2:`
+      + `bordercolor=black:`
+      + `x=(w-text_w)/2:`
     + `y=${levelY}:`
     + `enable='gte(t,${levelAppearTime})':`
     + `alpha='if(lt(t,${levelAppearTime}),0,if(lt(t,${levelAppearTime + 0.3}),(t-${levelAppearTime})/0.3,1))'`
@@ -320,6 +321,7 @@ async function processVideoWithRendi(
       in_segment: segmentUrl,
       in_screenshot: screenshotUpload.storage_url,
       in_audio: audioUrl,
+      in_font: RENDI_CONFIG.fontUrl,
     },
     output_files: {
       out_final: 'reel.mp4',
@@ -366,17 +368,17 @@ export async function generateCodingChallengeReel(): Promise<CodingChallengeResu
 
     await processVideoWithRendi(imagePath, audioUrl, videoPath, duration, snippet.difficulty);
 
-    const captionContent =
-      `==================== REEL ====================\n` +
-      `DIFFICULTY: ${snippet.difficulty}\n\n` +
-      `CODE:\n${snippet.code}\n\n` +
-      `CAPTION:\n${snippet.caption}\n\n` +
-      `AUDIO: ${audioUrl}\n`;
+    const captionContent
+      = `==================== REEL ====================\n`
+        + `DIFFICULTY: ${snippet.difficulty}\n\n`
+        + `CODE:\n${snippet.code}\n\n`
+        + `CAPTION:\n${snippet.caption}\n\n`
+        + `AUDIO: ${audioUrl}\n`;
 
     await fs.writeFile(captionPath, captionContent);
     console.log(`Caption saved: ${captionPath}`);
 
-    console.log('\n' + '='.repeat(60));
+    console.log(`\n${'='.repeat(60)}`);
     console.log('ALL DONE!');
     console.log('='.repeat(60));
     console.log(`Folder: ${outputDir}`);

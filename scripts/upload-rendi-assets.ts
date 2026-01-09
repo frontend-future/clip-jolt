@@ -16,13 +16,16 @@ if (!RENDI_API_KEY) {
   process.exit(1);
 }
 
+// TypeScript doesn't narrow after process.exit, so we need to assert the type
+const apiKey: string = RENDI_API_KEY;
+
 const BROLL_PATH = path.join(process.cwd(), 'public/assets/reel-generator/video/bRoll.MOV');
 const AUDIO_FOLDER = path.join(process.cwd(), 'public/assets/reel-generator/audio');
 
-interface UploadResults {
+type UploadResults = {
   bRollFileId: string;
   audioFileIds: Record<string, string>;
-}
+};
 
 async function uploadBRoll(client: ReturnType<typeof createRendiClient>): Promise<string> {
   console.log('\n📹 Uploading bRoll.MOV...');
@@ -110,7 +113,7 @@ ${audioFileIdsCode}
 async function main() {
   console.log('🚀 Starting Rendi asset upload...\n');
 
-  const client = createRendiClient(RENDI_API_KEY);
+  const client = createRendiClient(apiKey);
 
   try {
     // Upload bRoll video
@@ -127,18 +130,18 @@ async function main() {
     // Generate constants code
     const constantsCode = generateConstantsCode(results);
 
-    console.log('\n' + '='.repeat(80));
+    console.log(`\n${'='.repeat(80)}`);
     console.log('✅ ALL UPLOADS COMPLETE');
     console.log('='.repeat(80));
     console.log('\nAdd this to src/lib/reel-generator/constants.ts:\n');
     console.log(constantsCode);
-    console.log('\n' + '='.repeat(80));
+    console.log(`\n${'='.repeat(80)}`);
 
     // Save to a file for easy copying
     const outputPath = path.join(process.cwd(), 'rendi-assets.output.txt');
     await fs.writeFile(outputPath, constantsCode);
     console.log(`\n📄 Constants code saved to: ${outputPath}`);
-    console.log('='.repeat(80) + '\n');
+    console.log(`${'='.repeat(80)}\n`);
   } catch (error) {
     console.error('\n❌ Upload failed:', error);
     process.exit(1);

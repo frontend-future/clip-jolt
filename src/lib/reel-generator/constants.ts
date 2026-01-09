@@ -7,7 +7,7 @@ export const DEFAULTS: ReelDefaults = {
   width: 1080,
   height: 1920,
   padding: 80,
-  font: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+  font: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \'Liberation Mono\', \'Courier New\', monospace',
   background: 'radial-gradient(1200px circle at 10% 20%, #1f2937 0%, #0f172a 45%, #020617 100%)',
   scale: 2,
   fontSize: 24,
@@ -35,23 +35,21 @@ export const DEFAULTS: ReelDefaults = {
 //   - Optionally override these URLs with environment variables in production
 
 export const RENDI_CONFIG = {
-  // Base URL where your static assets are publicly hosted
-  // In production, this should be your domain
-  // In development, you can use ngrok or deploy to get public URLs
-  assetBaseUrl: process.env.NEXT_PUBLIC_ASSET_BASE_URL || 'https://PLACEHOLDER.com',
+  // Google Drive direct download URLs for Rendi to access
+  // Format: https://drive.google.com/uc?export=download&id={FILE_ID}
 
-  // Public URLs for static assets
-  // These will be passed to Rendi's FFmpeg commands
-  bRollUrl: `${process.env.NEXT_PUBLIC_ASSET_BASE_URL || 'https://PLACEHOLDER.com'}/assets/reel-generator/video/bRoll.MOV`,
-  audioFolderUrl: `${process.env.NEXT_PUBLIC_ASSET_BASE_URL || 'https://PLACEHOLDER.com'}/assets/reel-generator/audio`,
+  // bRoll video (66MB MOV file)
+  bRollUrl: 'https://drive.google.com/uc?export=download&id=1PUeLu7MZk3zY8XHsaBJFSRjTnb5PYkFl',
 
-  // Audio file names (Rendi will fetch these from audioFolderUrl)
+  // Font file (Inter.ttf)
+  fontUrl: 'https://drive.google.com/uc?export=download&id=1Swh-7hVJuD4Qw5jXK2t95MHR6GxChwzC',
+
+  // Audio folder URL (for constructing full audio URLs)
+  audioFolderUrl: 'https://drive.google.com/uc?export=download&id=',
+
+  // Audio files - Google Drive file IDs
   audioFiles: [
-    'ReelAudio-10371.mp3',
-    'ReelAudio-12635.mp3',
-    'ReelAudio-22545.mp3',
-    'ReelAudio-40298.mp3',
-    'ReelAudio-48155.mp3',
+    '12xH5kKVx0nN-GVcgyGa0CKMTSmHiNK3K', // MP3 file
   ],
 } as const;
 
