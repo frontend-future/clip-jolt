@@ -125,8 +125,8 @@ export class RendiVideoOperations {
       + '-filter_complex "'
       + '[1:v]scale=1080:1920[overlay];'
       + '[0:v][overlay]overlay=0:0[video_base];'
-      + `[video_base]drawtext=text='LEVEL\\\\: ${levelText}':`
-      + 'fontfile=/System/Library/Fonts/Supplemental/Arial\\\\ Bold.ttf:'
+      + `[video_base]drawtext=text='LEVEL\\: ${levelText}':`
+      + 'fontfile=/System/Library/Fonts/Supplemental/Arial\\ Bold.ttf:'
       + 'fontsize=42:fontcolor=#818cf8:borderw=2:bordercolor=black:'
       + `x=(w-text_w)/2:y=${levelY}:`
       + `enable='gte(t,${levelAppearTime})':`
