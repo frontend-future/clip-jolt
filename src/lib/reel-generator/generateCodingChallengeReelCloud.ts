@@ -66,7 +66,7 @@ async function getRandomAudioFile(audioFolder: string): Promise<string> {
     throw new Error(`No audio files found in ${audioFolder}`);
   }
 
-  const randomFile = audioFiles[Math.floor(Math.random() * audioFiles.length)];
+  const randomFile = audioFiles[Math.floor(Math.random() * audioFiles.length)]!;
   return path.join(audioFolder, randomFile);
 }
 

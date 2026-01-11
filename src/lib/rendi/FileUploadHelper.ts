@@ -1,4 +1,4 @@
-import type { Logger } from '@/libs/Logger';
+// Logger type removed - using optional logger parameter
 
 import type { R2Config } from './R2Uploader';
 import { R2Uploader } from './R2Uploader';
@@ -16,11 +16,8 @@ export interface UploadedFile {
 export class FileUploadHelper {
   private uploader: R2Uploader;
 
-  private logger?: Logger;
-
-  constructor(config: R2Config, logger?: Logger) {
+  constructor(config: R2Config, logger?: any) {
     this.uploader = new R2Uploader(config, logger);
-    this.logger = logger;
   }
 
   /**

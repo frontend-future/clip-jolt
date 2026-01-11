@@ -1,4 +1,4 @@
-import type { Logger } from '@/libs/Logger';
+// Logger type removed - using optional logger parameter
 
 export interface RendiConfig {
   apiKey: string;
@@ -83,9 +83,9 @@ export class RendiService {
 
   private readonly pollIntervalMs: number;
 
-  private logger?: Logger;
+  private logger?: any;
 
-  constructor(config: RendiConfig, logger?: Logger) {
+  constructor(config: RendiConfig, logger?: any) {
     this.apiKey = config.apiKey;
     this.baseUrl = config.baseUrl || 'https://api.rendi.dev/v1';
     this.maxPollAttempts = config.maxPollAttempts || 120; // 120 attempts * 5s = 10 minutes max

@@ -2,7 +2,7 @@ import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import type { Logger } from '@/libs/Logger';
+// Logger type removed - using optional logger parameter
 
 export interface R2Config {
   accountId: string;
@@ -23,11 +23,11 @@ export class R2Uploader {
 
   private publicDomain: string;
 
-  private logger?: Logger;
+  private logger?: any;
 
   private uploadedFiles: Set<string> = new Set();
 
-  constructor(config: R2Config, logger?: Logger) {
+  constructor(config: R2Config, logger?: any) {
     // R2 uses S3-compatible API
     this.s3Client = new S3Client({
       region: 'auto', // R2 uses 'auto' for region

@@ -1,13 +1,13 @@
 import path from 'node:path';
 
-import type { Logger } from '@/libs/Logger';
+// Logger type removed - using optional logger parameter
 
-import type { RendiInputFiles, RendiOutputFiles } from './RendiService';
+import type { RendiInputFiles } from './RendiService';
 import { RendiService } from './RendiService';
 
 export interface RendiVideoOperationsConfig {
   apiKey: string;
-  logger?: Logger;
+  logger?: any;
 }
 
 /**
@@ -17,7 +17,7 @@ export interface RendiVideoOperationsConfig {
 export class RendiVideoOperations {
   private rendiService: RendiService;
 
-  private logger?: Logger;
+  private logger?: any;
 
   constructor(config: RendiVideoOperationsConfig) {
     this.rendiService = new RendiService(
@@ -301,7 +301,7 @@ export class RendiVideoOperations {
    * Get video duration using ffprobe
    * Note: This still needs to be done locally or via Rendi's ffprobe endpoint
    */
-  async getVideoDuration(videoUrl: string): Promise<number> {
+  async getVideoDuration(_videoUrl: string): Promise<number> {
     // TODO: Implement using Rendi's ffprobe endpoint if available
     // For now, this would need to be done locally or via another method
     throw new Error(
