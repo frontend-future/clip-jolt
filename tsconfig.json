@@ -57,7 +57,10 @@
     "./out/**/*",
     "./node_modules/**/*",
     "**/*.spec.ts",
-    "**/*.e2e.ts"
+    "**/*.e2e.ts",
+    "vitest.config.mts",
+    "commitlint.config.ts",
+    "scripts/test-database.ts"
   ],
   "include": [
     "next-env.d.ts",
