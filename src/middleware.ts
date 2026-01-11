@@ -24,6 +24,9 @@ const isProtectedRoute = createRouteMatcher([
 const isPublicApiRoute = createRouteMatcher([
   '/api/health(.*)',
   '/api/generate/(.*)',
+  '/api/test-rendi(.*)',
+  '/api/hello-test(.*)',
+  '/api/generate-reel-cloud(.*)',
 ]);
 
 export default function middleware(
