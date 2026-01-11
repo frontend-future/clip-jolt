@@ -3,7 +3,7 @@ import path from 'node:path';
 import { NextResponse } from 'next/server';
 
 import type { CodingChallengeResult, GenerateResponse } from '@/lib/reel-generator';
-import { generateCodingChallengeReel } from '@/lib/reel-generator';
+import { generateCodingChallengeReelCloud } from '@/lib/reel-generator/generateCodingChallengeReelCloud';
 
 // Increase timeout for video generation (5 minutes)
 export const maxDuration = 300;
@@ -16,11 +16,12 @@ function pathToUrl(filePath: string): string {
 
 export async function POST(): Promise<NextResponse<GenerateResponse<CodingChallengeResult>>> {
   try {
-    const result = await generateCodingChallengeReel();
+    console.log('Starting cloud-based coding challenge reel generation...');
+    const result = await generateCodingChallengeReelCloud();
 
     return NextResponse.json({
       success: true,
-      message: 'Coding challenge reel generated successfully',
+      message: 'Coding challenge reel generated successfully (cloud)',
       data: {
         outputDir: pathToUrl(result.outputDir),
         videoPath: pathToUrl(result.videoPath),
@@ -29,8 +30,8 @@ export async function POST(): Promise<NextResponse<GenerateResponse<CodingChalle
         captionUrl: pathToUrl(result.captionPath),
         imagePath: pathToUrl(result.imagePath),
         imageUrl: pathToUrl(result.imagePath),
-        bRollSegmentPath: pathToUrl(result.bRollSegmentPath),
-        audioPath: pathToUrl(result.audioPath),
+        bRollSegmentPath: result.bRollSegmentPath || '',
+        audioPath: result.audioPath || '',
         snippet: result.snippet,
       },
     });
