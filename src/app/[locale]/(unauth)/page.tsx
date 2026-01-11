@@ -1,7 +1,6 @@
 import { getTranslations, unstable_setRequestLocale } from 'next-intl/server';
 
 import { CTANew } from '@/templates/CTANew';
-import { DemoBanner } from '@/templates/DemoBanner';
 import { FeaturesNew } from '@/templates/FeaturesNew';
 import { FooterNew } from '@/templates/FooterNew';
 import { HeroNew } from '@/templates/HeroNew';
@@ -25,7 +24,6 @@ const IndexPage = (props: { params: { locale: string } }) => {
 
   return (
     <>
-      <DemoBanner />
       <NavbarNew />
       <HeroNew />
       <FeaturesNew />

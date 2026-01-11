@@ -1,13 +1,8 @@
-import { useTranslations } from 'next-intl';
-
-import { badgeVariants } from '@/components/ui/badgeVariants';
 import { buttonVariants } from '@/components/ui/buttonVariants';
 import { CenteredHero } from '@/features/landing/CenteredHero';
 import { Section } from '@/features/landing/Section';
 
 export const HeroNew = () => {
-  const t = useTranslations('Hero');
-
   return (
     <Section className="py-20">
       <CenteredHero
@@ -48,7 +43,7 @@ export const HeroNew = () => {
           </>
         )}
       />
-      
+
       {/* Logo Cloud */}
       <div className="mt-16 flex flex-wrap items-center justify-center gap-8 opacity-60 grayscale">
         <div className="text-sm font-medium">Trusted by</div>

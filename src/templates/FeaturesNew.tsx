@@ -1,11 +1,8 @@
 import { CheckCircle2, Sparkles, Star } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 
 import { Section } from '@/features/landing/Section';
 
 export const FeaturesNew = () => {
-  const t = useTranslations('Features');
-
   return (
     <>
       {/* Product Showcase Section */}
@@ -30,11 +27,11 @@ export const FeaturesNew = () => {
               Key Benefits
             </span>
           </div>
-          
+
           <h2 className="mb-4 text-4xl font-bold tracking-tight text-black">
             Your Website Should Be Clear, Not Confusing
           </h2>
-          
+
           <div className="mt-10 space-y-6">
             <div className="flex items-start gap-4">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-100">
@@ -89,7 +86,7 @@ export const FeaturesNew = () => {
               Features
             </span>
           </div>
-          
+
           <h2 className="mb-12 text-4xl font-bold tracking-tight text-black">
             Interactive & Engaging Components
           </h2>
