@@ -145,8 +145,8 @@ importers:
         specifier: ^19.5.0
         version: 19.8.1(@types/node@22.19.5)(commitizen@4.3.1(@types/node@22.19.5)(typescript@5.9.3))(inquirer@8.2.5)(typescript@5.9.3)
       '@commitlint/types':
-        specifier: ^20.3.1
-        version: 20.3.1
+        specifier: ^19.8.1
+        version: 19.8.1
       '@eslint-react/eslint-plugin':
         specifier: ^1.15.0
         version: 1.53.1(eslint@8.57.1)(ts-api-utils@2.4.0(typescript@5.9.3))(typescript@5.9.3)
@@ -13378,6 +13378,7 @@ snapshots:
     dependencies:
       '@types/conventional-commits-parser': 5.0.2
       chalk: 5.6.2
+    optional: true
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
