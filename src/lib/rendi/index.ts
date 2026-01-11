@@ -11,6 +11,9 @@ export type {
   RendiPollResponse,
 } from './RendiService';
 
+export { R2Uploader } from './R2Uploader';
+export type { R2Config } from './R2Uploader';
+
 export { FileUploadHelper } from './FileUploadHelper';
 export type { UploadedFile } from './FileUploadHelper';
 
