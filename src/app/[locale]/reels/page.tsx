@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { CopyButton } from '@/components/CopyButton';
 
 type ReadCaptionReelData = {
   outputFolder: string;
@@ -128,15 +129,24 @@ const Reels = () => {
             </div>
             <div className="space-y-2">
               <div>
-                <h3 className="font-semibold text-lg">Hook:</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-lg">Hook:</h3>
+                  <CopyButton text={readCaptionReel.hook} label="Copy Hook" />
+                </div>
                 <p className="text-gray-700">{readCaptionReel.hook}</p>
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Caption:</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-lg">Caption:</h3>
+                  <CopyButton text={readCaptionReel.caption} label="Copy Caption" />
+                </div>
                 <p className="text-gray-700">{readCaptionReel.caption}</p>
               </div>
               <div>
-                <h3 className="font-semibold text-lg">CTA:</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-lg">CTA:</h3>
+                  <CopyButton text={readCaptionReel.cta} label="Copy CTA" />
+                </div>
                 <p className="text-gray-700">{readCaptionReel.cta}</p>
               </div>
               <div className="pt-2">
@@ -170,17 +180,26 @@ const Reels = () => {
             </div>
             <div className="space-y-2">
               <div>
-                <h3 className="font-semibold text-lg">Difficulty:</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-lg">Difficulty:</h3>
+                  <CopyButton text={codingChallengeReel.snippet.difficulty} label="Copy Difficulty" />
+                </div>
                 <p className="text-gray-700">{codingChallengeReel.snippet.difficulty}</p>
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Code:</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-lg">Code:</h3>
+                  <CopyButton text={codingChallengeReel.snippet.code} label="Copy Code" />
+                </div>
                 <pre className="bg-gray-800 text-green-400 p-4 rounded overflow-x-auto">
                   <code>{codingChallengeReel.snippet.code}</code>
                 </pre>
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Caption:</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-lg">Caption:</h3>
+                  <CopyButton text={codingChallengeReel.snippet.caption} label="Copy Caption" />
+                </div>
                 <p className="text-gray-700">{codingChallengeReel.snippet.caption}</p>
               </div>
               <div className="pt-2 flex gap-4">
