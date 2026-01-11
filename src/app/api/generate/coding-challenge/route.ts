@@ -2,8 +2,8 @@ import path from 'node:path';
 
 import { NextResponse } from 'next/server';
 
-import { generateCodingChallengeReel } from '@/lib/reel-generator';
 import type { CodingChallengeResult, GenerateResponse } from '@/lib/reel-generator';
+import { generateCodingChallengeReel } from '@/lib/reel-generator';
 
 // Increase timeout for video generation (5 minutes)
 export const maxDuration = 300;
@@ -16,8 +16,6 @@ function pathToUrl(filePath: string): string {
 
 export async function POST(): Promise<NextResponse<GenerateResponse<CodingChallengeResult>>> {
   try {
-    console.log('Generating coding challenge reel...');
-
     const result = await generateCodingChallengeReel();
 
     return NextResponse.json({

@@ -5,9 +5,9 @@ import { Env } from '@/libs/Env';
 
 /**
  * Database Health Check Endpoint
- * 
+ *
  * GET /api/health/database
- * 
+ *
  * Returns the status of the database connection.
  * Safe to call anytime - doesn't modify data.
  */
@@ -72,8 +72,8 @@ export async function GET() {
         tableCount: tables.rows.length,
       },
       storage: {
-        sizeBytes: parseInt(info.size_bytes),
-        sizeMB: (parseInt(info.size_bytes) / 1024 / 1024).toFixed(2),
+        sizeBytes: Number.parseInt(info.size_bytes),
+        sizeMB: (Number.parseInt(info.size_bytes) / 1024 / 1024).toFixed(2),
       },
       timestamp: new Date().toISOString(),
     });

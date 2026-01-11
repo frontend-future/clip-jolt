@@ -2,8 +2,8 @@ import path from 'node:path';
 
 import { NextResponse } from 'next/server';
 
-import { generateReadCaptionReel } from '@/lib/reel-generator';
 import type { GenerateResponse, ReadCaptionResult } from '@/lib/reel-generator';
+import { generateReadCaptionReel } from '@/lib/reel-generator';
 
 // Increase timeout for video generation (5 minutes)
 export const maxDuration = 300;
@@ -16,8 +16,6 @@ function pathToUrl(filePath: string): string {
 
 export async function POST(): Promise<NextResponse<GenerateResponse<ReadCaptionResult>>> {
   try {
-    console.log('Generating read caption reel...');
-
     const result = await generateReadCaptionReel();
 
     return NextResponse.json({

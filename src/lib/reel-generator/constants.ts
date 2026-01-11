@@ -7,7 +7,7 @@ export const DEFAULTS: ReelDefaults = {
   width: 1080,
   height: 1920,
   padding: 80,
-  font: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+  font: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \'Liberation Mono\', \'Courier New\', monospace',
   background: 'radial-gradient(1200px circle at 10% 20%, #1f2937 0%, #0f172a 45%, #020617 100%)',
   scale: 2,
   fontSize: 24,

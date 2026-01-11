@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
+
 import { CopyButton } from '@/components/CopyButton';
+import { Button } from '@/components/ui/button';
 
 type ReadCaptionReelData = {
   outputFolder: string;
@@ -87,15 +88,15 @@ const Reels = () => {
 
   return (
     <div className="container mx-auto p-8">
-      <h1 className="text-3xl font-bold mb-8">Reels</h1>
+      <h1 className="mb-8 text-3xl font-bold">Reels</h1>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+        <div className="mb-4 rounded border border-red-400 bg-red-100 p-4 text-red-700">
           {error}
         </div>
       )}
 
-      <div className="flex flex-col gap-4 max-w-md mb-8">
+      <div className="mb-8 flex max-w-md flex-col gap-4">
         <Button
           onClick={handleGenerateReadCaptionReel}
           disabled={loadingReadCaption || loadingCodingChallenge}
@@ -114,10 +115,11 @@ const Reels = () => {
 
       {/* Read Caption Reel Display */}
       {readCaptionReel && (
-        <div className="mt-8 p-6 bg-gray-50 rounded-lg">
-          <h2 className="text-2xl font-bold mb-4">Read Caption Reel</h2>
+        <div className="mt-8 rounded-lg bg-gray-50 p-6">
+          <h2 className="mb-4 text-2xl font-bold">Read Caption Reel</h2>
           <div className="flex flex-col gap-4">
             <div className="w-full max-w-md">
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
               <video
                 src={readCaptionReel.videoUrl}
                 controls
@@ -129,19 +131,19 @@ const Reels = () => {
             </div>
             <div className="space-y-2">
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-lg">Hook:</h3>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Hook:</h3>
                   <CopyButton text={readCaptionReel.hook} label="Copy Hook" />
                 </div>
                 <p className="text-gray-700">{readCaptionReel.hook}</p>
               </div>
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-lg">Caption:</h3>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Caption:</h3>
                   <CopyButton text={`${readCaptionReel.caption}\n\n${readCaptionReel.cta}`} label="Copy Caption" />
                 </div>
                 <p className="text-gray-700">{readCaptionReel.caption}</p>
-                <p className="text-gray-700 mt-2">{readCaptionReel.cta}</p>
+                <p className="mt-2 text-gray-700">{readCaptionReel.cta}</p>
               </div>
               <div className="pt-2">
                 <a
@@ -159,10 +161,11 @@ const Reels = () => {
 
       {/* Coding Challenge Reel Display */}
       {codingChallengeReel && (
-        <div className="mt-8 p-6 bg-gray-50 rounded-lg">
-          <h2 className="text-2xl font-bold mb-4">Coding Challenge Reel</h2>
+        <div className="mt-8 rounded-lg bg-gray-50 p-6">
+          <h2 className="mb-4 text-2xl font-bold">Coding Challenge Reel</h2>
           <div className="flex flex-col gap-4">
             <div className="w-full max-w-md">
+              {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
               <video
                 src={codingChallengeReel.videoUrl}
                 controls
@@ -174,29 +177,29 @@ const Reels = () => {
             </div>
             <div className="space-y-2">
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-lg">Difficulty:</h3>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Difficulty:</h3>
                   <CopyButton text={codingChallengeReel.snippet.difficulty} label="Copy Difficulty" />
                 </div>
                 <p className="text-gray-700">{codingChallengeReel.snippet.difficulty}</p>
               </div>
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-lg">Code:</h3>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Code:</h3>
                   <CopyButton text={codingChallengeReel.snippet.code} label="Copy Code" />
                 </div>
-                <pre className="bg-gray-800 text-green-400 p-4 rounded overflow-x-auto">
+                <pre className="overflow-x-auto rounded bg-gray-800 p-4 text-green-400">
                   <code>{codingChallengeReel.snippet.code}</code>
                 </pre>
               </div>
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-lg">Caption:</h3>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Caption:</h3>
                   <CopyButton text={codingChallengeReel.snippet.caption} label="Copy Caption" />
                 </div>
                 <p className="text-gray-700">{codingChallengeReel.snippet.caption}</p>
               </div>
-              <div className="pt-2 flex gap-4">
+              <div className="flex gap-4 pt-2">
                 <a
                   href={codingChallengeReel.videoUrl}
                   download={codingChallengeReel.outputDir}
