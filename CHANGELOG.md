@@ -1,3 +1,16 @@
+# [1.1.0](https://github.com/frontend-future/clip-jolt/compare/v1.0.0...v1.1.0) (2026-01-11)
+
+
+### Bug Fixes
+
+* resolve all lint errors ([67d4f50](https://github.com/frontend-future/clip-jolt/commit/67d4f5028fca0bb5a692578405d38e80775ef24a))
+
+
+### Features
+
+* redesign homepage with modern minimalist style ([b0474e4](https://github.com/frontend-future/clip-jolt/commit/b0474e4889ed84cd4a8ed2306a648f6d6e6a98f1))
+* remove SaaS boilerplate references and rebrand to Clip Jolt ([0ffd9cd](https://github.com/frontend-future/clip-jolt/commit/0ffd9cd3ed1a4030f577f343d954f6da0e45abc4))
+
 # 1.0.0 (2026-01-11)
 
 
