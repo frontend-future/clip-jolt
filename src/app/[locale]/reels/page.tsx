@@ -138,16 +138,10 @@ const Reels = () => {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-semibold text-lg">Caption:</h3>
-                  <CopyButton text={readCaptionReel.caption} label="Copy Caption" />
+                  <CopyButton text={`${readCaptionReel.caption}\n\n${readCaptionReel.cta}`} label="Copy Caption" />
                 </div>
                 <p className="text-gray-700">{readCaptionReel.caption}</p>
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-lg">CTA:</h3>
-                  <CopyButton text={readCaptionReel.cta} label="Copy CTA" />
-                </div>
-                <p className="text-gray-700">{readCaptionReel.cta}</p>
+                <p className="text-gray-700 mt-2">{readCaptionReel.cta}</p>
               </div>
               <div className="pt-2">
                 <a
