@@ -1,18 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import { Button } from '@/components/ui/button';
 
-interface CopyButtonProps {
+type CopyButtonProps = {
   text: string;
   label?: string;
   className?: string;
-}
+};
 
-export const CopyButton: React.FC<CopyButtonProps> = ({ 
-  text, 
-  label = 'Copy', 
-  className = '' 
+export const CopyButton: React.FC<CopyButtonProps> = ({
+  text,
+  label = 'Copy',
+  className = '',
 }) => {
   const [copied, setCopied] = useState(false);
 

@@ -26,11 +26,11 @@ export const NavbarNew = () => {
               </Link>
             </li>
             <li>
-              <Link 
-                className={buttonVariants({ 
+              <Link
+                className={buttonVariants({
                   size: 'default',
-                  className: 'bg-blue-600 hover:bg-blue-700 text-white text-sm'
-                })} 
+                  className: 'bg-blue-600 hover:bg-blue-700 text-white text-sm',
+                })}
                 href="/sign-up"
               >
                 {t('sign_up')}

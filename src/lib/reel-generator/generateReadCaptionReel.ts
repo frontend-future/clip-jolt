@@ -11,20 +11,19 @@ import { z } from 'zod';
 import { DEFAULTS, MAIN_TEXT_PROMPT } from './constants';
 import type { ReadCaptionResult } from './types';
 
-interface GeneratedText {
+type GeneratedText = {
   hook: string;
   caption: string;
   cta: string;
-}
+};
 
 async function generateTextWithLLM(): Promise<GeneratedText> {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('Missing OPENAI_API_KEY. Set it to run the OpenAI warmup call.');
   }
 
-  const variationPrompt =
-    MAIN_TEXT_PROMPT +
-    `
+  const variationPrompt
+    = `${MAIN_TEXT_PROMPT}
 
 IMPORTANT: You must generate a UNIQUE and DIFFERENT hook each time. Do NOT repeat the same hook. Vary the number, wording, and angle. Choose from the approved templates or create a new variation that matches the tone and style. Each generation should feel fresh and different from previous ones.`;
 
@@ -45,23 +44,20 @@ function getRandomAudioFile(): string | null {
   const audioDir = DEFAULTS.audioFolder;
 
   if (!fs.existsSync(audioDir)) {
-    console.log('Warning: audio directory not found, proceeding without background music');
     return null;
   }
 
   const audioExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac'];
   const audioFiles = fs
     .readdirSync(audioDir)
-    .filter((file) => audioExtensions.includes(path.extname(file).toLowerCase()))
-    .map((file) => path.join(audioDir, file));
+    .filter(file => audioExtensions.includes(path.extname(file).toLowerCase()))
+    .map(file => path.join(audioDir, file));
 
   if (audioFiles.length === 0) {
-    console.log('Warning: no audio files found in audio directory');
     return null;
   }
 
   const randomAudio = audioFiles[Math.floor(Math.random() * audioFiles.length)];
-  console.log(`Selected random audio: ${randomAudio}`);
 
   return randomAudio!;
 }
@@ -110,7 +106,7 @@ function extractSegment(
       .outputOptions(['-c:v libx264', '-c:a aac'])
       .output(outputFile)
       .on('end', () => resolve(outputFile))
-      .on('error', (err) => reject(new Error(`Failed to extract segment: ${err.message}`)))
+      .on('error', err => reject(new Error(`Failed to extract segment: ${err.message}`)))
       .run();
   });
 }
@@ -126,7 +122,7 @@ async function loopVideo(
 
   const concatFile = path.join(tempDir, 'concat.txt');
   const concatContent = Array(loopsNeeded)
-    .fill(`file '${inputFile.replace(/'/g, "'\\''")}'`)
+    .fill(`file '${inputFile.replace(/'/g, '\'\\\'\'')}'`)
     .join('\n');
 
   fs.writeFileSync(concatFile, concatContent);
@@ -139,7 +135,7 @@ async function loopVideo(
       .outputOptions(['-c:v libx264', '-c:a aac'])
       .output(outputFile)
       .on('end', () => resolve(outputFile))
-      .on('error', (err) => reject(new Error(`Failed to loop video: ${err.message}`)))
+      .on('error', err => reject(new Error(`Failed to loop video: ${err.message}`)))
       .run();
   });
 }
@@ -178,18 +174,12 @@ export async function generateReadCaptionReel(): Promise<ReadCaptionResult> {
 
   const audioFile = getRandomAudioFile();
 
-  console.log(`Getting video duration from ${inputFile}...`);
   const duration = await getVideoDuration(inputFile);
-  console.log(`Video duration: ${duration.toFixed(2)} seconds`);
 
   let startTime = 0;
-  if (duration < 7) {
-    console.log('Video is shorter than 7 seconds, will loop to fill 7 seconds');
-  } else {
+  if (duration >= 7) {
     startTime = Math.random() * (duration - 7);
   }
-
-  console.log(`Extracting segment starting at ${startTime.toFixed(2)} seconds...`);
 
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'video-reel-'));
   const tempSegment = path.join(tempDir, 'segment.mp4');
@@ -203,8 +193,6 @@ export async function generateReadCaptionReel(): Promise<ReadCaptionResult> {
     } else {
       await extractSegment(inputFile, startTime, 7, tempSegment);
     }
-
-    console.log('Resizing to 9:16 aspect ratio (1080x1920)...');
 
     const targetHeight = 1920;
 
@@ -220,19 +208,14 @@ export async function generateReadCaptionReel(): Promise<ReadCaptionResult> {
         ])
         .output(tempResized)
         .on('end', () => resolve())
-        .on('error', (err) => reject(new Error(`Failed to resize: ${err.message}`)))
+        .on('error', err => reject(new Error(`Failed to resize: ${err.message}`)))
         .run();
     });
 
     const outputFolder = createOutputFolder();
     const outputPath = path.join(outputFolder, 'reel.mp4');
 
-    console.log('Generating text and captions...');
-
     const { hook, caption, cta } = await generateTextWithLLM();
-    console.log('----------------Hook----------------:\n', hook);
-    console.log('----------------Caption----------------:\n', caption);
-    console.log('----------------CTA----------------:\n', cta);
 
     const mainText = hook;
     const subText = '(Read caption)';
@@ -240,13 +223,10 @@ export async function generateReadCaptionReel(): Promise<ReadCaptionResult> {
     const mainLines = wrapText(mainText, 30).split('\n');
     const subLines = wrapText(subText, 25).split('\n');
 
-    console.log('Main text will be displayed as:');
-    mainLines.forEach((line, i) => console.log(`  Line ${i + 1}: ${line}`));
-
     const escapeForDrawtext = (text: string): string => {
       return text
         .replace(/\\/g, '\\\\')
-        .replace(/'/g, "\\\\'")
+        .replace(/'/g, '\\\\\'')
         .replace(/:/g, '\\:');
     };
 
@@ -265,14 +245,14 @@ export async function generateReadCaptionReel(): Promise<ReadCaptionResult> {
       const yPos = mainStartY + index * (mainFontSize + mainLineSpacing);
       const escapedLine = escapeForDrawtext(line);
       drawtextFilters.push(
-        `drawtext=fontfile=${DEFAULTS.fontPath}:` +
-          `text='${escapedLine}':` +
-          `fontcolor=white:` +
-          `fontsize=${mainFontSize}:` +
-          `x=(w-text_w)/2:` +
-          `y=${yPos}:` +
-          `borderw=3:` +
-          `bordercolor=black`,
+        `drawtext=fontfile=${DEFAULTS.fontPath}:`
+        + `text='${escapedLine}':`
+        + `fontcolor=white:`
+        + `fontsize=${mainFontSize}:`
+        + `x=(w-text_w)/2:`
+        + `y=${yPos}:`
+        + `borderw=3:`
+        + `bordercolor=black`,
       );
     });
 
@@ -280,24 +260,21 @@ export async function generateReadCaptionReel(): Promise<ReadCaptionResult> {
       const yPos = subStartY + index * (subFontSize + subLineSpacing);
       const escapedLine = escapeForDrawtext(line);
       drawtextFilters.push(
-        `drawtext=fontfile=${DEFAULTS.fontPath}:` +
-          `text='${escapedLine}':` +
-          `fontcolor=white:` +
-          `fontsize=${subFontSize}:` +
-          `x=(w-text_w)/2:` +
-          `y=${yPos}:` +
-          `enable='gte(t,4)':` +
-          `borderw=2:` +
-          `bordercolor=black`,
+        `drawtext=fontfile=${DEFAULTS.fontPath}:`
+        + `text='${escapedLine}':`
+        + `fontcolor=white:`
+        + `fontsize=${subFontSize}:`
+        + `x=(w-text_w)/2:`
+        + `y=${yPos}:`
+        + `enable='gte(t,4)':`
+        + `borderw=2:`
+        + `bordercolor=black`,
       );
     });
-
-    console.log(`Exporting to ${outputPath}...`);
 
     const ffmpegCommand = ffmpeg(tempResized);
 
     if (audioFile) {
-      console.log('Adding background audio...');
       ffmpegCommand.input(audioFile);
     }
 
@@ -336,17 +313,15 @@ export async function generateReadCaptionReel(): Promise<ReadCaptionResult> {
         .outputOptions(outputOptions)
         .output(outputPath)
         .on('end', () => {
-          console.log(`\nVideo exported successfully to: ${outputPath}`);
           resolve(outputPath);
         })
-        .on('error', (err) => reject(new Error(`Failed to add captions: ${err.message}`)))
+        .on('error', err => reject(new Error(`Failed to add captions: ${err.message}`)))
         .run();
     });
 
     const captionContent = `${hook}\n\n${caption}\n\n${cta}`;
     const captionPath = path.join(outputFolder, 'caption.txt');
     await fsPromises.writeFile(captionPath, captionContent);
-    console.log(`Caption saved: ${captionPath}`);
 
     return {
       outputFolder,

@@ -9,11 +9,11 @@ export const StatsSection = () => {
             Analytics
           </span>
         </div>
-        
+
         <h2 className="mb-4 text-4xl font-bold tracking-tight text-black">
           A Template Built to Convert
         </h2>
-        
+
         <p className="mb-12 text-lg text-gray-600">
           Designed to guide users through your key offerings while showcasing your product's value.
         </p>
@@ -33,7 +33,7 @@ export const StatsSection = () => {
 
           {/* Simple chart visualization */}
           <div className="relative h-32">
-            <svg className="h-full w-full" viewBox="0 0 400 100" preserveAspectRatio="none">
+            <svg className="size-full" viewBox="0 0 400 100" preserveAspectRatio="none">
               <polyline
                 fill="none"
                 stroke="#3B82F6"

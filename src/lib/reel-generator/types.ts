@@ -1,10 +1,10 @@
-export interface CodingSnippet {
+export type CodingSnippet = {
   difficulty: 'EASY' | 'MEDIUM' | 'HARD';
   code: string;
   caption: string;
-}
+};
 
-export interface CodingChallengeResult {
+export type CodingChallengeResult = {
   outputDir: string;
   videoPath: string;
   captionPath: string;
@@ -12,18 +12,18 @@ export interface CodingChallengeResult {
   bRollSegmentPath: string;
   audioPath: string;
   snippet: CodingSnippet;
-}
+};
 
-export interface ReadCaptionResult {
+export type ReadCaptionResult = {
   outputFolder: string;
   videoPath: string;
   captionPath: string;
   hook: string;
   caption: string;
   cta: string;
-}
+};
 
-export interface GenerateResponse<T> {
+export type GenerateResponse<T> = {
   success: boolean;
   message?: string;
   error?: string;
@@ -32,9 +32,9 @@ export interface GenerateResponse<T> {
     captionUrl: string;
     imageUrl?: string;
   };
-}
+};
 
-export interface ReelDefaults {
+export type ReelDefaults = {
   theme: string;
   width: number;
   height: number;
@@ -49,4 +49,4 @@ export interface ReelDefaults {
   fontPath: string;
   outputDir: string;
   levelAppearTime: number;
-}
+};
