@@ -136,7 +136,6 @@
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.19.1",
     "typescript": "^5.6.3",
-    "vite": "^7.3.1",
     "vite-tsconfig-paths": "^5.0.1",
     "vitest": "^2.1.9",
     "vitest-fail-on-console": "^0.7.1"
