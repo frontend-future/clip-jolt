@@ -1,18 +1,18 @@
 #!/usr/bin/env tsx
 /**
  * Database Connection Test Script
- * 
+ *
  * This script tests the connection to the Neon database and verifies:
  * 1. Connection is successful
  * 2. SSL is working
  * 3. Tables exist
  * 4. Basic CRUD operations work
- * 
+ *
  * Usage: npm run db:test
  */
 
-import { Client } from 'pg';
 import * as dotenv from 'dotenv';
+import { Client } from 'pg';
 
 // Load environment variables
 dotenv.config({ path: '.env.local' });
@@ -27,7 +27,7 @@ if (!DATABASE_URL) {
 
 async function testDatabaseConnection() {
   console.log('🔍 Testing Neon Database Connection...\n');
-  
+
   const client = new Client({
     connectionString: DATABASE_URL,
   });
@@ -48,8 +48,10 @@ async function testDatabaseConnection() {
 
     // Test 3: Check SSL
     console.log('3️⃣  Checking SSL connection...');
-    const sslInfo = await client.query('SELECT ssl_is_used()');
-    if (sslInfo.rows[0].ssl_is_used) {
+    const sslInfo = await client.query(`
+      SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()
+    `);
+    if (sslInfo.rows.length > 0 && sslInfo.rows[0].ssl) {
       console.log('✅ SSL is enabled\n');
     } else {
       console.log('⚠️  SSL is not enabled (this is okay for local testing)\n');
@@ -63,12 +65,12 @@ async function testDatabaseConnection() {
       WHERE table_schema = 'public'
       ORDER BY table_name
     `);
-    
+
     if (tables.rows.length === 0) {
       console.log('⚠️  No tables found. Run migrations first: npm run db:migrate\n');
     } else {
       console.log('✅ Tables found:');
-      tables.rows.forEach(row => {
+      tables.rows.forEach((row) => {
         console.log(`   - ${row.table_name}`);
       });
       console.log('');
@@ -78,7 +80,7 @@ async function testDatabaseConnection() {
     console.log('5️⃣  Verifying schema...');
     const expectedTables = ['organization', 'todo'];
     const existingTables = tables.rows.map(row => row.table_name);
-    
+
     let allTablesExist = true;
     for (const table of expectedTables) {
       if (existingTables.includes(table)) {
@@ -88,7 +90,7 @@ async function testDatabaseConnection() {
         allTablesExist = false;
       }
     }
-    
+
     if (!allTablesExist) {
       console.log('\n⚠️  Some tables are missing. Run: npm run db:migrate\n');
     } else {
@@ -98,12 +100,12 @@ async function testDatabaseConnection() {
     // Test 6: Test CRUD operations (if tables exist)
     if (allTablesExist) {
       console.log('6️⃣  Testing CRUD operations...');
-      
+
       // Create
       const testUserId = `test_user_${Date.now()}`;
       const insertResult = await client.query(
         'INSERT INTO todo (owner_id, title, message) VALUES ($1, $2, $3) RETURNING id',
-        [testUserId, 'Test Todo', 'This is a test todo item']
+        [testUserId, 'Test Todo', 'This is a test todo item'],
       );
       const todoId = insertResult.rows[0].id;
       console.log(`   ✅ CREATE: Inserted todo with ID ${todoId}`);
@@ -111,14 +113,14 @@ async function testDatabaseConnection() {
       // Read
       const selectResult = await client.query(
         'SELECT * FROM todo WHERE id = $1',
-        [todoId]
+        [todoId],
       );
       console.log(`   ✅ READ: Retrieved todo "${selectResult.rows[0].title}"`);
 
       // Update
       await client.query(
         'UPDATE todo SET title = $1 WHERE id = $2',
-        ['Updated Test Todo', todoId]
+        ['Updated Test Todo', todoId],
       );
       console.log(`   ✅ UPDATE: Updated todo title`);
 
@@ -132,7 +134,6 @@ async function testDatabaseConnection() {
     console.log('🎉 All database tests passed!');
     console.log('═══════════════════════════════════════');
     console.log('Your Neon database is ready to use.\n');
-
   } catch (error) {
     console.error('\n❌ Database test failed:');
     console.error(error);

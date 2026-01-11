@@ -22,7 +22,7 @@ const isProtectedRoute = createRouteMatcher([
 ]);
 
 const isPublicApiRoute = createRouteMatcher([
-  '/api/health',
+  '/api/health(.*)',
   '/api/generate/(.*)',
 ]);
 
