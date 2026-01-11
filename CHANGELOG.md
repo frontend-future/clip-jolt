@@ -1,3 +1,22 @@
+# 1.0.0 (2026-01-11)
+
+
+### Bug Fixes
+
+* regenerate package-lock.json to resolve CI failures ([bda0e66](https://github.com/frontend-future/clip-jolt/commit/bda0e66ff32b89632e9fc13119db896ebbdf487a))
+* resolve TypeScript LocalePrefix type error for Vercel build ([f7f3ce2](https://github.com/frontend-future/clip-jolt/commit/f7f3ce23b1c025ef3acd477e2a9490fcfb8d576e))
+
+
+### Features
+
+* add /reels route ([fed245f](https://github.com/frontend-future/clip-jolt/commit/fed245ffa62c9c7b7722a94e5de28000f08fc558))
+* add click-to-copy functionality for generated text ([c97af0f](https://github.com/frontend-future/clip-jolt/commit/c97af0f7c16269cc27239ff4f589cde0aa93f6ea))
+* basic API to generate reels ([61cdcd9](https://github.com/frontend-future/clip-jolt/commit/61cdcd99e6cb7dd6e2188a52fddcf0a1141b2e71))
+* db fix ([01fc094](https://github.com/frontend-future/clip-jolt/commit/01fc094be3292f72baa3b1bece1937a2b9447764))
+* integrate Neon database with comprehensive testing ([a5eb573](https://github.com/frontend-future/clip-jolt/commit/a5eb57381976155d65fdfc5dfdec6a8cac0cc1f1))
+* server scripts ([1768b64](https://github.com/frontend-future/clip-jolt/commit/1768b641363d1f15c9a19a6b8aa29bb3b89bb21c))
+* very basic frontend ([9b57f51](https://github.com/frontend-future/clip-jolt/commit/9b57f51862c0e8773bfea132ee88ee95c3c2bd4b))
+
 ## [1.7.7](https://github.com/ixartz/SaaS-Boilerplate/compare/v1.7.6...v1.7.7) (2025-12-12)
 
 
