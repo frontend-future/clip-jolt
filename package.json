@@ -6,6 +6,7 @@
     "dev:next": "next dev",
     "dev": "run-p dev:*",
     "build": "next build",
+    "build:dev": "vite build --mode development",
     "start": "next start",
     "build-stats": "cross-env ANALYZE=true npm run build",
     "clean": "rimraf .next out coverage",
